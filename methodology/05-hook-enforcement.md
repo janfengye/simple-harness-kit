@@ -36,6 +36,13 @@ Hook 返回值：
 
 ## 核心 Hook 清单
 
+### 0. Session Logger（全过程记录）
+
+**触发：** PostToolUse:Agent, PostToolUse:Bash, PostToolUse:Edit, PostToolUse:Write
+**作用：** 每次工具调用后自动追加日志到 `.harness/session-log.md`
+
+这是整个 Harness 的"黑匣子"。AI 可能忘记手动记录，但 Hook 不会忘。记录内容包括 Agent 派发、命令执行、文件变更。人的指示和偏差分析仍需 AI 在规则引导下主动记录，但工具操作层面有了 100% 的兜底。
+
 ### 1. Safety Guard（安全防护）
 
 **触发：** PreToolUse:Bash

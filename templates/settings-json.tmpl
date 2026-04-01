@@ -44,5 +44,36 @@
         "description": "上下文预算监控，超阈值提醒 compact"
       }
     ]
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录 Agent 派发到 session-log"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录 Bash 命令到 session-log"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录文件编辑到 session-log"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录文件创建到 session-log"
+      }
+    ]
   }
 }
