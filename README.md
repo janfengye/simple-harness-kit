@@ -172,17 +172,31 @@ AI 读代码 → 理解行为 → 生成测试 → 运行 → 报告覆盖率和
 - 不需要自己配置测试框架
 - 不需要自己算覆盖率
 
-#### 其他框架怎么做测试
+#### 我们从各框架借鉴了什么
 
-| 框架/工具 | 测试策略 | 我们借鉴了什么 |
-|---------|---------|-------------|
-| **ECC Superpowers** | TDD 铁律 "NO CODE WITHOUT FAILING TEST"，红绿重构循环 | Layer 1 的 TDD 纪律直接来自 Superpowers |
-| **ECC verification-loop** | Build→Type→Lint→Test→Security→Diff 六阶段检查 | Layer 2 的 Verification Loop 完整借鉴 |
-| **ECC santa-method** | 双独立 Reviewer + 收敛修复循环 + batch sampling | Layer 4 的 Santa Method 完整借鉴 |
-| **ECC eval-harness** | pass@k 指标（pass@1, pass@3）+ Capability/Regression Eval | 我们的量化指标体系来源 |
-| **Ralphinho RFC-DAG** | 每个 work unit 按复杂度分 tier，不同 tier 不同测试深度 | 我们的简化模式（轻量/标准/完整）参考了 tier 分级思想 |
-| **OpenAI Harness Engineering** | 3 人团队日均 3.5 PR，百万行仓库 | 验证了 Hook + 约束 + 自动化 QA 可以规模化 |
-| **GitHub Squad** | inspectable, predictable, repository-native | 我们的 session-log 和 constraints 遵循同样原则：plain text，版本化，可审查 |
+我们不是从零发明方法论，而是从行业最佳实践中提炼和整合。以下是各框架对我们不同维度的影响：
+
+| 框架/工具 | 我们借鉴的维度 | 具体内容 |
+|---------|-------------|---------|
+| **ECC Superpowers** | 工作流纪律 | TDD 铁律 + Red Flags 清单 + 两阶段 Review（先 Spec 后 Quality） |
+| | 测试 | "NO CODE WITHOUT FAILING TEST" 红绿重构 → 我们的 Layer 1 |
+| | Agent 执行 | subagent-driven-development 模式 → 我们的独立 Agent 隔离 |
+| | 上下文管理 | strategic-compact 在逻辑边界压缩 → 我们的 context-monitor Hook |
+| **ECC verification-loop** | QA 自动化 | Build→Type→Lint→Test→Security→Diff → 我们的 Layer 2 |
+| **ECC santa-method** | 对抗验证 | 双独立 Reviewer + 收敛修复循环 + batch sampling → 我们的 Layer 4 |
+| **ECC eval-harness** | 量化度量 | pass@k 指标 + Capability/Regression Eval → 我们的指标体系 |
+| **ECC continuous-learning-v2** | 行为记录 | Hook 驱动 100% 事件捕获 → 我们的 session-logger Hook |
+| **ECC safety-guard** | 安全防护 | careful/freeze/guard 三模式 → 我们的 safety-guard Hook |
+| **ECC rules-distill** | 规则治理 | 从 skill 提炼跨项目规则 → 我们的 Constraint ID 体系灵感 |
+| **Ralphinho RFC-DAG** | 任务编排 | 按复杂度分 tier + 分层并行 + merge queue → 我们的简化模式分级 |
+| | 角色隔离 | Author 和 Reviewer 分离在不同 context window → 我们的核心设计 |
+| **OpenAI Harness Engineering** | 工程实践 | 3 人团队日均 3.5 PR 管理百万行仓库 → 验证了约束+自动化可规模化 |
+| **GitHub Squad** | 设计原则 | inspectable, predictable, repository-native → session-log/constraints 的设计原则 |
+| | 存储模式 | `.squad/` plain text + 版本化 → `.harness/` + `docs/constraints.md` |
+| **DeerFlow 2.0** | 架构概念 | SuperAgent Harness = sandbox + memory + skill + subagent → 我们的概念层对齐 |
+| **微软 Agentic Platform** | 渐进路线 | autocomplete → contextual enforcement → autonomous → 我们的轻量/标准/完整模式 |
+| **Cursor .cursorrules** | 项目级规则 | 项目根目录放规则文件，AI 自动加载 → 我们的 .claude/rules/ 同思路 |
+| **AGENTS.md 标准** | 跨工具兼容 | OpenAI/Cursor/Google 共同推进的开放格式 → 我们同时提供 CLAUDE.md + AGENTS.md |
 
 ---
 
@@ -209,8 +223,8 @@ docs/constraints.md   ← 约束系统
 
 验证 Hook 生效——故意触发一次：
 ```
-> rm -rf /
-[Safety Guard] 禁止删除根目录或 home 目录   ← 拦截成功
+> git push --force origin main
+[Safety Guard] 禁止 force push，使用 --force-with-lease   ← 拦截成功
 ```
 
 #### 场景 2：开发一个功能
@@ -485,7 +499,7 @@ SETUP → PLAN(13 tasks)
 
 1. 先用**轻量模式**（只跑 Layer 1-2 QA）感受流程
 2. 用 `init-prompt.md` 生成配置，不需要手动写
-3. **故意触发一次 Hook 拦截**（输入 `rm -rf /`），建立信心
+3. **故意触发一次 Hook 拦截**（输入 `git push --force origin main`），建立信心
 4. 读一遍 Experiment A 的 session-log，理解真实操作过程
 
 #### 日常开发
@@ -664,7 +678,11 @@ simple-harness-kit/
 
 ### 许可
 
-MIT
+MIT — 选择理由：
+- 零法律摩擦，最大化团队和社区采纳
+- 方法论项目的核心价值在于被广泛使用，而非控制衍生
+- 与我们主要参考来源 ECC 保持一致
+- 如未来需要专利保护（项目演变为核心算法工具），可升级为 Apache 2.0
 
 ---
 
