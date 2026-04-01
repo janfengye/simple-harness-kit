@@ -1,0 +1,51 @@
+# CLAUDE.md
+
+## 项目简介
+
+{{一句话描述项目}}
+
+## 技术栈
+
+{{语言/框架/工具}}
+
+## 常用命令
+
+```bash
+# 构建
+{{构建命令}}
+
+# 测试
+{{测试命令}}
+
+# Lint
+{{lint 命令}}
+
+# 类型检查
+{{类型检查命令}}
+```
+
+## Harness 规则（自动加载）
+
+详细规则在 `.claude/rules/` 中：
+- `role-constraints.md` — 角色操作约束
+- `qa-standards.md` — QA 量化标准
+- `feedback-workflow.md` — 反馈处理流程
+- `agent-dispatch.md` — Agent 派发规范
+
+## Hooks（自动执行）
+
+- `safety-guard.js` — 拦截危险命令
+- `agent-check.js` — Agent prompt 合规检查
+- `verification-gate.js` — 提交前验证门控
+- `delivery-review.js` — 交付前复盘
+- `context-monitor.js` — 上下文预算监控
+
+## 关键文件索引
+
+- `docs/constraints.md` — 约束系统（SINGLE SOURCE OF TRUTH）
+- {{其他关键文件...}}
+
+## 工作流
+
+遵循 6 阶段 Loop：Plan → Setup → Execute → Verify → Review → Feedback
+详见 Harness Engineering 方法论。

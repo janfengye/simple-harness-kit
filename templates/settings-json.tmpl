@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
+        ],
+        "description": "拦截危险命令（rm -rf, force push, DROP TABLE 等）"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/verification-gate.js" }
+        ],
+        "description": "提交前检查 QA 验证是否完成"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/delivery-review.js" }
+        ],
+        "description": "交付前触发 5 项复盘检查"
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/agent-check.js" }
+        ],
+        "description": "修复类 Agent 必须引用 Constraint ID"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+        ],
+        "description": "上下文预算监控，超阈值提醒 compact"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+        ],
+        "description": "上下文预算监控，超阈值提醒 compact"
+      }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+# Agent 派发规范 / Agent Dispatch Rules
+
+## 修复类 Agent
+
+Prompt 必须包含：
+1. 引用 Constraint ID（如 `C-UI-03`）
+2. 指向 docs/constraints.md
+3. 不包含具体实现代码（让 Agent 自己决定）
+4. 要求自验（运行测试确认通过）
+
+```markdown
+# 示例
+修复 C-{{area}}-{{number}} 违规。
+读取 docs/constraints.md 中该约束的完整描述。
+扫描 {{范围}} 中所有不符合该约束的地方，全部修复。
+修复后运行 {{测试命令}} 确认通过。
+```
+
+## Spec Compliance Reviewer Agent
+
+独立 session，接收：
+- 需求规格文档
+- Agent 的代码变更（diff 或文件内容）
+
+输出：结构化 PASS/FAIL 清单，逐项对照 spec。
+
+## Code Quality Reviewer Agent
+
+独立 session，在 Spec Review 通过后执行。接收：
+- 代码变更
+- 项目编码规范
+
+输出：APPROVE / REQUEST_CHANGES + 分级 issues。
+
+## QA Agent
+
+独立 session，执行 Verification Loop：
+1. Build → Type → Lint → Test → Security → Diff
+2. 输出量化报告
+3. 全部 PASS 才算通过
+
+## 模型选择
+
+| 任务类型 | 推荐模型 |
+|---------|---------|
+| 机械性实现（单文件、规格清晰） | Haiku / Sonnet |
+| 集成性实现（多文件、需要判断） | Sonnet / Opus |
+| Code Quality Review | Opus |
+| Spec Compliance Review | Sonnet |
