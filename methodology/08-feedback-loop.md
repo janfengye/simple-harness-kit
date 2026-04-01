@@ -84,6 +84,15 @@ F5: 派 Agent → 引用 ID，按规则修复
 
 **先写规则，再派 Agent。** 规则是 single source of truth。
 
+### VH 记录更新
+
+Violation History 不是一次写入就完事。修复后必须回来更新：
+- 补充根因分析
+- 标注修复状态（已修复 / 部分修复 / 未修复）
+- 关联修复的 commit hash
+
+> **实战经验（Experiment B）：** VH-01 记录了"3 个 E2E 失败，待分析"，但修复后根因已明确（远程 fetch 超时）却未回来更新。VH 记录的价值在于完整的"问题→根因→修复"闭环。
+
 ## F5: 派 Agent 按规则修复
 
 Agent prompt 必须：

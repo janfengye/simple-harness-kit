@@ -138,7 +138,9 @@ Phase 4: Fix Until Nice
 - 上下文隔离：两个 Reviewer 互不可见
 - 相同 rubric：评审标准一致
 - 都必须通过：一个发现问题就算 NAUGHTY
-- Fresh Agent per round：每轮修复后用新 Agent 重审，防止锚定偏差
+- **Fresh Agent per round：每轮修复后必须用全新 Reviewer Agent 重审，防止锚定偏差。"跑测试通过了"不等于 NICE——必须有独立 Reviewer 的结构化报告才算。**
+
+> **实战经验（Experiment B）：** Santa Round 2 被标记为"隐式"——仅跑了测试确认修复，没有真正重启双 Reviewer。这不符合 Santa 的核心设计：每轮都需要独立的新视角来审查。"隐式确认"可能遗漏 Fix 引入的新问题。
 
 **Rubric 设计原则：**
 每个检查项必须有客观的 PASS/FAIL 条件，不接受"看起来不错"。

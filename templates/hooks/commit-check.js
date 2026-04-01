@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+'use strict';
+
+/**
+ * Commit Check Hook — 提交前检查两件事:
+ * 1. AI session 的 commit 必须包含 Co-Authored-By
+ * 2. REVIEW 阶段检查是否有未提交变更（配合 verification-gate）
+ *
+ * 触发: PreToolUse:Bash
+ */
+
+const { execSync } = require('child_process');
+const MAX_STDIN = 1024 * 1024;
+let raw = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => {
+  if (raw.length < MAX_STDIN) raw += chunk.substring(0, MAX_STDIN - raw.length);
+});
+
+process.stdin.on('end', () => {
+  try {
+    const input = JSON.parse(raw);
+    const cmd = String(input.tool_input?.command || '');
+
+    // === 检查 1: git commit 必须包含 Co-Authored-By ===
+    if (/git\s+commit/.test(cmd)) {
+      // 从命令中提取 commit message
+      const msgMatch = cmd.match(/-m\s+["']([^"']+)["']/s) ||
+                        cmd.match(/-m\s+"?\$\(cat\s+<<['"]?EOF([\s\S]*?)EOF/);
+      const msg = msgMatch ? (msgMatch[1] || msgMatch[2] || '') : '';
+
+      if (msg && !/Co-Authored-By:/i.test(msg)) {
+        process.stderr.write(
+          '[Commit Check] AI 辅助的 commit 缺少 Co-Authored-By 标注。\n' +
+          '→ 格式: Co-Authored-By: {工具名} ({模型ID})\n' +
+          '→ 例如: Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
+          '→ 详见 methodology/12-commit-standards.md\n'
+        );
+        // 警告但不阻止，因为可能是纯人工 commit
+      }
+    }
+
+    // === 检查 2: 检测 REVIEW 相关操作时，提醒未提交变更 ===
+    if (/delivery|review|交付|复盘/.test(cmd)) {
+      try {
+        const status = execSync('git status --porcelain', { encoding: 'utf8', timeout: 5000 });
+        if (status.trim()) {
+          const fileCount = status.trim().split('\n').length;
+          process.stderr.write(
+            `[Commit Check] 有 ${fileCount} 个文件未提交。\n` +
+            '→ REVIEW Gate 要求：代码已提交，commit message 引用 Constraint ID。\n' +
+            '→ 请先 commit 再进行交付复盘。\n'
+          );
+        }
+      } catch {}
+    }
+  } catch {}
+  process.stdout.write(raw);
+});

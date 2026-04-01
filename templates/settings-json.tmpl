@@ -23,6 +23,13 @@
         "description": "交付前触发 5 项复盘检查"
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/commit-check.js" }
+        ],
+        "description": "AI commit 必须包含 Co-Authored-By + REVIEW 阶段检查未提交变更"
+      },
+      {
         "matcher": "Agent",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/agent-check.js" }

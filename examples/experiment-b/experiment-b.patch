@@ -1,0 +1,370 @@
+diff --git a/app/functions/getArticles.ts b/app/functions/getArticles.ts
+index 1f1ea23..2821ba0 100644
+--- a/app/functions/getArticles.ts
++++ b/app/functions/getArticles.ts
+@@ -1,3 +1,5 @@
++import articlesData from "@/json/articles.json";
++
+ export type ArticleType = {
+   id: number;
+   author: string;
+@@ -6,6 +8,10 @@ export type ArticleType = {
+   avatar: string;
+   imgAlt: string;
+   slug: string;
++  biography: {
++    summary: string;
++    body: string;
++  };
+   articles: Array<{
+     title: string;
+     popular: boolean;
+@@ -28,14 +34,6 @@ export type ArticleType = {
+   }>;
+ };
+ 
+-export async function getArticles() {
+-  const res = await fetch(
+-    "https://raw.githubusercontent.com/asbhogal/Fyrre-Magazine/main/json/articles.json"
+-  );
+-
+-  if (!res.ok) {
+-    throw new Error("Failed to fetch article data");
+-  }
+-
+-  return res.json();
++export async function getArticles(): Promise<ArticleType[]> {
++  return articlesData as unknown as ArticleType[];
+ }
+diff --git a/app/functions/getNews.ts b/app/functions/getNews.ts
+index f5be3d3..89c7d80 100644
+--- a/app/functions/getNews.ts
++++ b/app/functions/getNews.ts
+@@ -1,11 +1,5 @@
+-export async function getNews(): Promise<string[]> {
+-  const res = await fetch(
+-    "https://raw.githubusercontent.com/asbhogal/Fyrre-Magazine/main/json/news.json"
+-  );
+-
+-  if (!res.ok) {
+-    throw new Error("Failed to fetch news data");
+-  }
++import newsData from "@/json/news.json";
+ 
+-  return res.json();
++export async function getNews(): Promise<string[]> {
++  return newsData;
+ }
+diff --git a/app/functions/getPodcasts.ts b/app/functions/getPodcasts.ts
+index 08060ee..ed3dfee 100644
+--- a/app/functions/getPodcasts.ts
++++ b/app/functions/getPodcasts.ts
+@@ -1,3 +1,5 @@
++import podcastsData from "@/json/podcasts.json";
++
+ export type PodcastType = {
+   id: number;
+   title: string;
+@@ -16,13 +18,5 @@ export type PodcastType = {
+ };
+ 
+ export async function getPodcasts(): Promise<PodcastType[]> {
+-  const res = await fetch(
+-    "https://raw.githubusercontent.com/asbhogal/Fyrre-Magazine/main/json/podcasts.json"
+-  );
+-
+-  if (!res.ok) {
+-    throw new Error("Failed to fetch podcast data");
+-  }
+-
+-  return res.json();
++  return podcastsData as PodcastType[];
+ }
+diff --git a/components/ArticleFilterButtons.tsx b/components/ArticleFilterButtons.tsx
+deleted file mode 100644
+index a84725e..0000000
+--- a/components/ArticleFilterButtons.tsx
++++ /dev/null
+@@ -1,33 +0,0 @@
+-"use client";
+-
+-import { useArticleContext } from "@/hooks/useArticleContext";
+-import { Button } from "./ui/button";
+-
+-export default function ArticleFilterButtons() {
+-  const { data } = useArticleContext();
+-
+-  const labels = [
+-    "All",
+-    ...new Set(
+-      data.flatMap((article) => article.articles.map((item) => item.label))
+-    ),
+-  ];
+-
+-  console.log(labels);
+-  return (
+-    <>
+-      {data && (
+-        <div className="flex gap-2">
+-          {labels.map((label, index) => (
+-            <Button
+-              className="px-3 py-2 bg-white text-black hover:bg-black hover:text-white border border-black rounded-full"
+-              key={index}
+-            >
+-              {label}
+-            </Button>
+-          ))}
+-        </div>
+-      )}
+-    </>
+-  );
+-}
+diff --git a/components/Articles/Articles.tsx b/components/Articles/Articles.tsx
+index 97b6522..d280807 100644
+--- a/components/Articles/Articles.tsx
++++ b/components/Articles/Articles.tsx
+@@ -2,88 +2,144 @@
+ 
+ import { useArticleContext } from "@/hooks/useArticleContext";
+ import Link from "next/link";
++import Image from "next/image";
+ import { Button } from "../ui/button";
+-import { useState } from "react";
++import { Input } from "../ui/input";
++import { useMemo, useState } from "react";
+ 
+ export default function Articles() {
+   const { data } = useArticleContext();
+   const [selectedLabel, setSelectedLabel] = useState("All");
++  const [searchQuery, setSearchQuery] = useState("");
+ 
+-  const labels: string[] = [
+-    "All",
+-    ...new Set(
+-      data.flatMap((article) => article.articles.map((item) => item.label))
+-    ),
+-  ];
++  const labels = useMemo(
++    () => [
++      "All",
++      ...new Set(
++        data.flatMap((article) => article.articles.map((item) => item.label))
++      ),
++    ],
++    [data]
++  );
+ 
+-  const filteredArticles = data.flatMap((article) =>
+-    article.articles
+-      .filter((item) =>
+-        selectedLabel === "All" ? true : selectedLabel === item.label
+-      )
+-      .map((item) => ({
+-        ...item,
+-        author: article.author,
+-      }))
++  const filteredArticles = useMemo(
++    () =>
++      data.flatMap((article) =>
++        article.articles
++          .filter((item) => {
++            const matchesLabel =
++              selectedLabel === "All" ? true : selectedLabel === item.label;
++            const query = searchQuery.toLowerCase();
++            const matchesSearch =
++              query === ""
++                ? true
++                : item.title.toLowerCase().includes(query) ||
++                  item.description.toLowerCase().includes(query);
++            return matchesLabel && matchesSearch;
++          })
++          .map((item) => ({
++            ...item,
++            author: article.author,
++          }))
++      ),
++    [data, selectedLabel, searchQuery]
+   );
+ 
++  const handleLabelClick = (label: string) => {
++    setSelectedLabel(label);
++  };
++
+   return (
+     <div className="max-w-[95rem] w-full mx-auto">
++      <div role="search" className="my-6">
++        <label htmlFor="article-search" className="sr-only">
++          Search articles
++        </label>
++        <Input
++          id="article-search"
++          type="search"
++          placeholder="Search articles..."
++          aria-label="Search articles"
++          value={searchQuery}
++          onChange={(e) => setSearchQuery(e.target.value)}
++          className="w-full sm:w-80 border-black"
++        />
++      </div>
+       <div className="flex flex-wrap justify-between items-center gap-2 md:gap-0 my-6">
+-        <p className="font-semibold uppercase">Categories</p>
+-        {data && (
+-          <div className="flex flex-wrap gap-2">
+-            {labels.map((label, index) => (
+-              <Button
+-                className={`px-3 py-2 bg-white text-black hover:bg-black hover:text-white border border-black rounded-full ${
+-                  label === selectedLabel
+-                    ? "bg-black text-white"
+-                    : "border-black"
+-                }`}
+-                key={index}
+-                onClick={() => setSelectedLabel(label)}
+-              >
+-                {label}
+-              </Button>
+-            ))}
+-          </div>
+-        )}
++        <p className="font-semibold uppercase" id="categories-label">
++          Categories
++        </p>
++        <div
++          className="flex flex-wrap gap-2"
++          role="group"
++          aria-labelledby="categories-label"
++        >
++          {labels.map((label) => (
++            <Button
++              className={`px-3 py-2 bg-white text-black hover:bg-black hover:text-white border border-black rounded-full ${
++                label === selectedLabel
++                  ? "bg-black text-white"
++                  : "border-black"
++              }`}
++              key={label}
++              aria-pressed={label === selectedLabel}
++              onClick={() => handleLabelClick(label)}
++            >
++              {label}
++            </Button>
++          ))}
++        </div>
+       </div>
+-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-black border-collapse mb-48">
+-        {filteredArticles.map((articleData, index) => (
+-          <article className="border border-black p-8" key={index}>
+-            <div className="flex items-center justify-between">
+-              <time dateTime={articleData.date}>{articleData.date}</time>
+-              <span className="px-3 py-2 border border-black rounded-full">
+-                <p className="uppercase">{articleData.label}</p>
+-              </span>
+-            </div>
+-            <Link href={`magazine/${articleData.slug}`}>
+-              <img
+-                className="w-full my-8 hover:scale-105 transition"
+-                src={articleData.img}
+-                alt={articleData.imgAlt}
+-              />
+-            </Link>
+-            <h2 className="heading3-title mb-3">
++      <div aria-live="polite" role="status" className="sr-only">
++        {filteredArticles.length === 0
++          ? "No articles found"
++          : `${filteredArticles.length} articles found`}
++      </div>
++      {filteredArticles.length === 0 ? (
++        <div className="text-center py-16 mb-48 border border-black">
++          <p className="text-lg text-muted-foreground">
++            No articles found. Try a different search term or category.
++          </p>
++        </div>
++      ) : (
++        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-black border-collapse mb-48">
++          {filteredArticles.map((articleData) => (
++            <article className="border border-black p-8" key={articleData.slug}>
++              <div className="flex items-center justify-between">
++                <time dateTime={articleData.date}>{articleData.date}</time>
++                <span className="px-3 py-2 border border-black rounded-full uppercase">
++                  {articleData.label}
++                </span>
++              </div>
+               <Link href={`/magazine/${articleData.slug}`}>
+-                {articleData.title}
++                <Image
++                  className="w-full my-8 hover:scale-105 transition"
++                  src={articleData.img}
++                  alt={articleData.imgAlt}
++                  width={920}
++                  height={613}
++                />
+               </Link>
+-            </h2>
+-            <p className="mt-3 mb-12">{articleData.description}</p>
+-            <div className="flex flex-wrap gap-4">
+-              <span className="flex">
+-                <p className="font-semibold pr-2">Text</p>
+-                <p>{articleData.author}</p>
+-              </span>
+-              <span className="flex">
+-                <p className="font-semibold pr-2">Duration</p>
+-                <p>{articleData.read}</p>
+-              </span>
+-            </div>
+-          </article>
+-        ))}
+-      </div>
++              <h2 className="heading3-title mb-3">
++                <Link href={`/magazine/${articleData.slug}`}>
++                  {articleData.title}
++                </Link>
++              </h2>
++              <p className="mt-3 mb-12">{articleData.description}</p>
++              <div className="flex flex-wrap gap-4">
++                <span className="flex">
++                  <p className="font-semibold pr-2">Text</p>
++                  <p>{articleData.author}</p>
++                </span>
++                <span className="flex">
++                  <p className="font-semibold pr-2">Duration</p>
++                  <p>{articleData.read}</p>
++                </span>
++              </div>
++            </article>
++          ))}
++        </div>
++      )}
+     </div>
+   );
+ }
+diff --git a/e2e/a11y.spec.ts b/e2e/a11y.spec.ts
+index c79d057..df655d5 100644
+--- a/e2e/a11y.spec.ts
++++ b/e2e/a11y.spec.ts
+@@ -12,3 +12,16 @@ test.describe("homepage", () => {
+     expect(accessibilityScanResults.violations).toEqual([]);
+   });
+ });
++
++test.describe("magazine page", () => {
++  test("should not have any automatically detectable accessibility issues", async ({
++    page,
++  }) => {
++    await page.goto("/magazine");
++    await page.getByRole("article").first().waitFor({ timeout: 90000 });
++
++    const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
++
++    expect(accessibilityScanResults.violations).toEqual([]);
++  });
++});
+diff --git a/playwright.config.ts b/playwright.config.ts
+index c13a2f5..603a272 100644
+--- a/playwright.config.ts
++++ b/playwright.config.ts
+@@ -1,6 +1,7 @@
+ import { type PlaywrightTestConfig } from "@playwright/test";
+ 
+ const config: PlaywrightTestConfig = {
++  timeout: 120000,
+   webServer: {
+     command: "npm run dev",
+     port: 3000,
