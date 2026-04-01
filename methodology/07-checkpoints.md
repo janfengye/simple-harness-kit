@@ -21,8 +21,10 @@
 |--------|------|---------|
 | Rules 存在 | .claude/rules/ 下有规则文件 | 文件检查 |
 | Hooks 配置 | .claude/settings.json 中有 hooks | 文件检查 |
-| Hook 生效 | 故意触发拦截，验证被阻止 | 实际测试 |
+| **Hook 实弹测试** | **故意触发一次拦截，验证 Hook 真的生效** | **实际执行危险命令（如 echo "rm -rf /" 通过 stdin 传给 safety-guard.js）** |
 | Constraints 存在 | docs/constraints.md 已创建 | 文件检查 |
+
+> **实战经验（Experiment A）：** SETUP 阶段只检查了文件是否存在，没有实际测试 Hook 拦截效果。后来发现 session-logger.js 的 PostToolUse Hook 可能未正确触发。如果 SETUP 阶段做了实弹测试，就能更早发现问题。
 
 ### ③ EXECUTE Gate（每个任务）
 
@@ -54,7 +56,10 @@
 | QA 达标 | 各层报告完整 | 报告检查 |
 | 需求完整 | 全部需求处理 | 逐项对照 |
 | 规则升级 | 新问题写入 constraints | 文件检查 |
+| **代码已提交** | **变更已 commit，commit message 引用 Constraint ID（如适用）** | **git status 无未提交变更** |
 | 改进记录 | 改进机会已记录 | 文本检查 |
+
+> **实战经验（Experiment A）：** REVIEW 通过但代码未 commit，所有变更停留在 working tree。加入"代码已提交"检查项防止此问题。
 
 ## 铁律（Iron Laws）
 

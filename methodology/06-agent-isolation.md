@@ -19,20 +19,45 @@ Session 开始：
 
 上下文越长，system prompt 中规则的"有效权重"越低。这不是 bug，是 LLM 注意力机制的固有特性。
 
-## 解决方案：每个任务一个独立 Agent
+## 解决方案：角色隔离 + 按需任务隔离
+
+Agent 隔离的**核心目的是角色分离**（Implementer vs Reviewer），而不是机械地每个子任务都起新 Agent。
+
+### 什么时候必须隔离
+
+- **Implementer vs Reviewer** — 写代码的和审代码的必须是不同 Agent（消除 author-bias）
+- **长时间执行** — 单个 Agent 上下文超过阈值时，切换新 Agent
+- **不相关任务** — 两个任务之间没有上下文依赖
+
+### 什么时候可以不隔离
+
+- **同功能顺序依赖的任务** — 比如"定义类型 → 设默认值 → 写测试 → 写实现"属于同一个功能的 TDD 流程，同一个 Implementer Agent 执行更高效
+- **任务间共享大量上下文** — 拆成独立 Agent 反而要重复传递相同的代码上下文
+
+> **实战经验（Experiment A）：** json-2-csv 项目中，6 个子任务（T1-T6）都是 `alwaysQuote` 功能的 TDD 步骤，由同一个 Implementer Agent 完成。而 Spec Compliance Review 由独立 Reviewer Agent 执行——正是这个独立 Reviewer 发现了 Implementer 遗漏的 `alwaysQuote + fieldTitleMap` 交互 bug。
+
+### 隔离决策矩阵
+
+| 场景 | 是否隔离 | 理由 |
+|------|---------|------|
+| Implementer vs Reviewer | **必须** | author-bias |
+| 同功能 TDD 步骤 | 不必 | 共享上下文更高效 |
+| 不同功能的独立任务 | **建议** | 防止上下文污染 |
+| Fix Agent（修复 Review 发现的问题） | **建议** | 带上问题上下文但无历史包袱 |
+| 上下文已超 50 次工具调用 | **必须** | 规则遵从度下降 |
 
 ```
 主 Agent（调度者/PM）
   ├── 只做：任务分配、结果验收、决策
   ├── 不做：直接写代码、直接执行 pipeline
   │
-  ├→ dispatch Implementer Agent（任务 1）
+  ├→ dispatch Implementer Agent（同功能多任务可合并）
   │   上下文 = rules + 任务描述 + 相关代码
   │   没有历史对话噪声
   │   rules 在最前面，权重最高
   │   执行完毕 → 返回结果 → Agent 销毁
   │
-  ├→ dispatch Spec Reviewer Agent（审查任务 1）
+  ├→ dispatch Spec Reviewer Agent（审查——必须独立）
   │   上下文 = rules + spec + 代码变更
   │   独立于 Implementer（消除 author-bias）
   │   只做审查，不做修改

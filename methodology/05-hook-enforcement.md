@@ -43,6 +43,8 @@ Hook 返回值：
 
 这是整个 Harness 的"黑匣子"。AI 可能忘记手动记录，但 Hook 不会忘。记录内容包括 Agent 派发、命令执行、文件变更。人的指示和偏差分析仍需 AI 在规则引导下主动记录，但工具操作层面有了 100% 的兜底。
 
+> **实战经验（Experiment A）：** session-logger.js 的 PostToolUse Hook 在实验中可能未正确触发（日志全由 AI 主动写入）。**SETUP 阶段必须用实弹测试验证 Hook 生效**——不能只检查文件存在。排查方向：PostToolUse hook 的 stdin 格式是否与 PreToolUse 一致、hook 脚本是否有执行权限。
+
 ### 1. Safety Guard（安全防护）
 
 **触发：** PreToolUse:Bash

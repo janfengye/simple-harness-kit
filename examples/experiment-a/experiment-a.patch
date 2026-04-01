@@ -1,0 +1,185 @@
+diff --git a/src/constants.ts b/src/constants.ts
+index 3d46080..675770c 100644
+--- a/src/constants.ts
++++ b/src/constants.ts
+@@ -40,6 +40,7 @@ export const defaultJson2CsvOptions: DefaultJson2CsvOptions = {
+     useDateIso8601Format: false,
+     useLocaleFormat: false,
+     wrapBooleans: false,
++    alwaysQuote: false,
+     fieldTitleMap: Object.create({}),
+ };
+ 
+diff --git a/src/json2csv.ts b/src/json2csv.ts
+index de58afd..9906422 100755
+--- a/src/json2csv.ts
++++ b/src/json2csv.ts
+@@ -142,25 +142,32 @@ export const Json2Csv = function (options: DefaultJson2CsvOptions) {
+     }
+ 
+     /**
+-     * Generates the CSV header string by joining the headerFields by the field delimiter
++     * Apply the fieldTitleMap to header fields before wrapping.
+      */
+-    function generateCsvHeader(params: Json2CsvParams) {
+-        // #185 - generate a keys list to avoid finding native Map() methods
++    function applyFieldTitleMap(params: Json2CsvParams) {
+         const fieldTitleMapKeys = Object.keys(options.fieldTitleMap);
+ 
+-        params.header = params.headerFields
+-            .map(function (field) {
+-                let headerKey = field;
+-
+-                // If a custom field title was provided for this field, use that
++        if (fieldTitleMapKeys.length) {
++            params.headerFields = params.headerFields.map(function (field) {
+                 if (fieldTitleMapKeys.includes(field)) {
+-                    headerKey = options.fieldTitleMap[field];
+-                } else if (!options.escapeHeaderNestedDots) {
+-                    // Otherwise, if the user doesn't want nested dots in keys to be escaped, then unescape them
+-                    headerKey = headerKey.replace(/\\\./g, '.');
++                    return options.fieldTitleMap[field];
+                 }
++                return field;
++            });
++        }
++        return params;
++    }
+ 
+-                return headerKey;
++    /**
++     * Generates the CSV header string by joining the headerFields by the field delimiter
++     */
++    function generateCsvHeader(params: Json2CsvParams) {
++        params.header = params.headerFields
++            .map(function (field) {
++                if (!options.escapeHeaderNestedDots) {
++                    return field.replace(/\\\./g, '.');
++                }
++                return field;
+             })
+             .join(options.delimiter.field);
+         return params;
+@@ -429,7 +436,8 @@ export const Json2Csv = function (options: DefaultJson2CsvOptions) {
+         }
+         // if the field contains a comma (field delimiter), quotation mark (wrap delimiter), line break, or CRLF
+         //   then enclose it in quotation marks (wrap delimiter)
+-        if (fieldValue.includes(options.delimiter.field) ||
++        if (options.alwaysQuote ||
++            fieldValue.includes(options.delimiter.field) ||
+             fieldValue.includes(options.delimiter.wrap) ||
+             fieldValue.match(crlfSearchRegex) ||
+             options.wrapBooleans && (fieldValue === 'true' || fieldValue === 'false')) {
+@@ -485,7 +493,8 @@ export const Json2Csv = function (options: DefaultJson2CsvOptions) {
+         };
+         const unwinded = unwindRecordsIfNecessary(headerFields);
+         const processed = processRecords(unwinded);
+-        const wrapped = wrapHeaderFields(processed);
++        const titled = applyFieldTitleMap(processed);
++        const wrapped = wrapHeaderFields(titled);
+         const trimmed = trimHeaderFields(wrapped);
+         const generated = generateCsvHeader(trimmed);
+ 
+diff --git a/src/types.ts b/src/types.ts
+index 8ab71c9..acafac7 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -35,6 +35,9 @@ interface SharedConverterOptions {
+    */
+   wrapBooleans?: boolean;
+ 
++  /** Should all values be wrapped in wrap delimiters? @default false */
++  alwaysQuote?: boolean;
++
+   /**
+    * Specify the keys that should be converted
+    *
+@@ -192,7 +195,7 @@ export interface DefaultCsv2JsonOptions extends
+   Pick<Csv2JsonOptions, 'headerFields'>,
+   Pick<Csv2JsonOptions, 'parseValue'>,
+   // Then extend the types with required fields and specific fields omitted:
+-  Omit<Omit<Omit<Omit<BuiltCsv2JsonOptions, 'wrapBooleans'>, 'keys'>, 'headerFields'>, 'parseValue'> {}
++  Omit<Omit<Omit<Omit<Omit<BuiltCsv2JsonOptions, 'wrapBooleans'>, 'alwaysQuote'>, 'keys'>, 'headerFields'>, 'parseValue'> {}
+ 
+ export type FullCsv2JsonOptions = DefaultCsv2JsonOptions
+ 
+diff --git a/test/config/testCsvFilesList.ts b/test/config/testCsvFilesList.ts
+index f14ef79..341a515 100644
+--- a/test/config/testCsvFilesList.ts
++++ b/test/config/testCsvFilesList.ts
+@@ -59,6 +59,7 @@ const csvFileConfig = [
+     { key: 'keyWithEndingDot', file: '../data/csv/keyWithEndingDot.csv' },
+     { key: 'fieldEolAtStart', file: '../data/csv/fieldEolAtStart.csv' },
+     { key: 'renamedHeaderField', file: '../data/csv/renamedHeaderField.csv' },
++    { key: 'alwaysQuote', file: '../data/csv/alwaysQuote.csv' },
+ ];
+ 
+ function readCsvFile(filePath: string) {
+diff --git a/test/config/testJsonFilesList.ts b/test/config/testJsonFilesList.ts
+index 4815eb0..11eeb8e 100644
+--- a/test/config/testJsonFilesList.ts
++++ b/test/config/testJsonFilesList.ts
+@@ -51,4 +51,5 @@ export default {
+     keyWithEndingDot: require('../data/json/keyWithEndingDot.json'),
+     fieldEolAtStart: require('../data/json/fieldEolAtStart.json'),
+     deepNestedArrays: require('../data/json/deepNestedArrays.json'),
++    alwaysQuote: require('../data/json/alwaysQuote.json'),
+ };
+diff --git a/test/json2csv.ts b/test/json2csv.ts
+index e542156..1e667bf 100644
+--- a/test/json2csv.ts
++++ b/test/json2csv.ts
+@@ -650,6 +650,53 @@ export function runTests() {
+                 assert.equal(csv, expectedCsv);
+             });
+ 
++            // Test cases for https://github.com/mrodrig/json-2-csv/issues/281
++            it('should wrap all values in wrap delimiters when alwaysQuote is true', () => {
++                const csv = json2csv(jsonTestData.alwaysQuote, {
++                    alwaysQuote: true
++                });
++                assert.equal(csv, csvTestData.alwaysQuote);
++            });
++
++            it('should not wrap all values when alwaysQuote is not specified', () => {
++                const csv = json2csv(jsonTestData.alwaysQuote);
++                // Without alwaysQuote, only fields that need wrapping get wrapped
++                assert.notEqual(csv, csvTestData.alwaysQuote);
++                // "Mike" should NOT be wrapped
++                assert.ok(!csv.includes('"Mike"'));
++                // "5" should NOT be wrapped
++                assert.ok(!csv.includes('"5"'));
++            });
++
++            it('should wrap all values including empty strings when alwaysQuote is true', () => {
++                const csv = json2csv([{ a: '', b: 'test' }], {
++                    alwaysQuote: true
++                });
++                assert.equal(csv, '"a","b"\n"","test"');
++            });
++
++            it('should wrap numeric values when alwaysQuote is true', () => {
++                const csv = json2csv([{ num: 42 }], {
++                    alwaysQuote: true
++                });
++                assert.equal(csv, '"num"\n"42"');
++            });
++
++            it('should properly escape and wrap values containing wrap delimiters when alwaysQuote is true', () => {
++                const csv = json2csv([{ val: 'say "hi"' }], {
++                    alwaysQuote: true
++                });
++                assert.equal(csv, '"val"\n"say ""hi"""');
++            });
++
++            it('should wrap all values and apply fieldTitleMap when alwaysQuote is true', () => {
++                const csv = json2csv([{ name: 'Mike', age: 30 }], {
++                    alwaysQuote: true,
++                    fieldTitleMap: { name: 'Full Name', age: 'Age' }
++                });
++                assert.equal(csv, '"Full Name","Age"\n"Mike","30"');
++            });
++
+             // Test cases for https://github.com/mrodrig/json-2-csv/issues/209
+             it('should left trim equals (=) if preventCsvInjection is specified', () => {
+                 const csv = json2csv([{ name: '=Bob' }], {
