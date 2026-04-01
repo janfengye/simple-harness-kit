@@ -1,34 +1,33 @@
 # CLAUDE.md
 
-## Project Overview
+## 项目概述
 
-Simple Harness Kit — a portable Harness Engineering methodology + template repository. Pure documentation project, no application code.
+Simple Harness Kit — 可移植的 Harness Engineering 方法论 + 模板仓库。纯文档项目，无应用代码。
 
-## What This Repo Is For
+## 本仓库用途
 
-This repo contains methodology docs, templates, and skills that AI agents read to generate project-specific development harness configurations (Rules, Hooks, Constraints, QA pipelines).
+包含方法论文档、模板和 Skills，AI Agent 读取后可为任意项目生成开发 Harness 配置（Rules、Hooks、Constraints、QA 流水线）。
 
-## File Structure
+## 文件结构
 
-- `methodology/` — Core methodology documents, numbered 00-10
-- `templates/` — Generatable templates (.tmpl files) for rules, hooks, constraints
-- `skills/` — Claude Code / Codex installable skills (SKILL.md format)
-- `examples/` — Real-world validation experiments with evidence
-- `init-prompt.md` — User fills project info, feeds to AI to generate harness
+- `methodology/` — 方法论核心文档，编号 00-10
+- `templates/` — 可生成的模板文件（.tmpl 后缀）
+- `skills/` — Claude Code / Codex 可安装的 Skills（SKILL.md 格式）
+- `examples/` — 实战验证案例（附证据链）
+- `init-prompt.md` — 用户填写项目信息后喂给 AI 生成 Harness
 
-## Writing Conventions
+## 写作约定
 
-- All docs in Chinese (methodology audience is Chinese-speaking teams)
-- Code examples and technical terms keep English original
-- Markdown format, no HTML
-- File naming: lowercase with hyphens
-- No emojis unless in diagrams
+- 默认中文，技术术语和代码示例保留英文原文
+- Markdown 格式，不用 HTML
+- 文件命名：小写 + 连字符
+- 不使用 emoji
 
-## Key Concepts (referenced across docs)
+## 关键概念（跨文档引用）
 
-- **6-Stage Loop**: Plan → Setup → Execute → Verify → Review → Feedback
-- **5-Layer QA Pyramid**: Self-verify → Tool checks → Spec review → Santa dual review → Human review
-- **Hook Enforcement**: PreToolUse/PostToolUse hooks as primary constraint mechanism
-- **Agent Isolation**: Fresh subagent per task, no context pollution
-- **Constraint ID**: `C-{area}-{number}` format, single source of truth in constraints.md
-- **F1-F5 Feedback Loop**: Record → Classify → Extract rule → Write to file → Dispatch agent
+- **6 阶段 Loop**: Plan → Setup → Execute → Verify → Review → Feedback
+- **5 层 QA 金字塔**: Agent 自验 → 工具检查 → Spec 审查 → Santa 对抗验证 → 人工终审
+- **Hook 强制执行**: PreToolUse/PostToolUse Hook 作为主要约束机制
+- **Agent 隔离**: 每个任务独立 subagent，无上下文污染
+- **Constraint ID**: `C-{area}-{number}` 格式，single source of truth 在 constraints.md
+- **F1-F5 反馈闭环**: 记录 → 分类 → 提炼规则 → 写入文件 → 派 Agent

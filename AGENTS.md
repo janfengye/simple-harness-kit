@@ -1,24 +1,24 @@
 # AGENTS.md
 
-Compatible with OpenAI Codex, Cursor, and other tools supporting the AGENTS.md standard.
+兼容 OpenAI Codex、Cursor 及其他支持 AGENTS.md 标准的工具。
 
-## Project Overview
+## 项目概述
 
-Simple Harness Kit — a portable Harness Engineering methodology + template repository. Read `methodology/` for the full framework. Read `init-prompt.md` for how to bootstrap a new project.
+Simple Harness Kit — 可移植的 Harness Engineering 方法论 + 模板仓库。阅读 `methodology/` 了解完整框架，阅读 `init-prompt.md` 了解如何为新项目初始化 Harness。
 
-## Conventions
+## 约定
 
-- Documentation is in Chinese; code examples and technical terms stay in English
-- All methodology docs are in `methodology/`, numbered 00-10
-- Templates in `templates/` use `.tmpl` suffix
-- Skills follow SKILL.md format with YAML frontmatter
+- 文档默认中文；代码示例和技术术语保留英文
+- 方法论文档在 `methodology/`，编号 00-10
+- 模板在 `templates/`，使用 `.tmpl` 后缀
+- Skills 遵循 SKILL.md 格式（YAML frontmatter）
 
-## Key Workflow
+## 核心工作流
 
-This repo defines a 6-Stage development loop: Plan → Setup → Execute → Verify → Review → Feedback. Each stage has gate conditions that must be met before proceeding.
+本仓库定义了 6 阶段开发循环：Plan → Setup → Execute → Verify → Review → Feedback。每个阶段有 Gate 条件，满足后才能进入下一阶段。
 
-## When Working With This Repo
+## 使用本仓库
 
-- To understand the methodology: read `methodology/00-philosophy.md` first, then others in order
-- To generate a project harness: read `init-prompt.md` and follow instructions
-- To install skills: copy `skills/*/` to your skills directory
+- 理解方法论：从 `methodology/00-philosophy.md` 开始，按编号顺序阅读
+- 为项目生成 Harness：阅读 `init-prompt.md` 并按指引操作
+- 安装 Skills：将 `skills/*/` 复制到你的 skills 目录
