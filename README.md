@@ -122,16 +122,31 @@ AI 自动执行 F1-F5：记录 → 分类 → 提炼规则 → 写入 constraint
 
 AI 扫描项目 → 生成配置 → 已知问题写入 constraints → QA 标准按当前状态渐进设置。
 
-#### 补测试（已有项目缺少测试）
+#### 补测试（已有项目缺少测试——企业常见痛点）
 
-**用户不写测试——AI 写，用户验收。**
+**用户不写测试——AI 写，用户验收。** 这是企业项目最常见的场景：历史代码大量依赖人工测试，自动化覆盖率低或为零。
 
 ```
-分析 src/auth/ 的代码，为所有公开函数生成单元测试。
-不改业务代码，只写测试。发现 bug 记录到 constraints 但不修。
+帮我为这个项目建立自动化测试体系。
+目前没有任何自动化测试，全靠人工。
+重点关注 src/auth/ 和 src/api/ 这两个模块。
 ```
 
-AI 读代码 → 生成测试 → 运行 → 报告问题。后续每次开发，TDD 纪律自动维持覆盖率只增不减。
+AI 自动执行 5 个阶段：
+
+```
+Phase 1: 分析 → 扫描代码,识别模块风险,输出优先级报告
+         → 暂停,等用户确认优先级
+Phase 2: 搭基础设施 → 安装测试框架,写 smoke test 验证环境
+Phase 3: 按优先级生成测试 → 单元→集成→E2E→a11y 逐层补充
+         → 发现 bug 记录到 constraints,不自动修(用户决定)
+Phase 4: 多层覆盖 → 根据项目类型补充对应层级
+Phase 5: 报告 → 覆盖率变化 + 发现的问题 + 后续建议
+```
+
+**业界参考：** [Diffblue Cover](https://www.diffblue.com/) 为 Java 项目全自动生成单测；[QA Wolf](https://www.qawolf.com/) 从自然语言生成 Playwright E2E；[OpenObserve](https://openobserve.ai/blog/autonomous-qa-testing-ai-agents-claude-code/) 用 8 个 AI Agent 将测试从 380 增长到 700+。我们的方案不绑定特定工具，用 Harness 方法论编排 AI 完成同样的事。
+
+详见 [skills/harness-test-bootstrap/](skills/harness-test-bootstrap/)
 
 ---
 
@@ -282,13 +297,33 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 | **OpenCode** | ⚠️ 插件 API | 未验证 | 有 tool.execute.before/after 但需改写为 TypeScript 插件 |
 | **Windsurf** | ❌ 仅审计 | 不支持 | 无 PreToolUse 阻止能力，无法运行完整 Harness |
 
+### 环境变量
+
+| 变量 | 值 | 作用 |
+|------|---|------|
+| `HARNESS_LOG` | `off` | 关闭 session-log 自动记录（其他 Hook 不受影响） |
+| `HARNESS_AUTO` | `full` | 全程自动，PLAN 也不暂停 |
+| `HARNESS_AUTO` | `off` | 每个阶段都暂停等用户确认 |
+| *(默认)* | — | PLAN 完成后暂停确认，其余阶段自动 |
+
+```bash
+# 全自动模式（适合 CI/批量任务）
+HARNESS_AUTO=full claude
+
+# 关闭日志（适合探索性原型）
+HARNESS_LOG=off claude
+
+# 每步确认（适合学习/演示）
+HARNESS_AUTO=off claude
+```
+
 ### 仓库结构
 
 ```
 simple-harness-kit/
 ├── methodology/   13 篇方法论文档
 ├── templates/     5 规则模板 + 7 Hook 脚本 + 4 配置模板
-├── skills/        5 个 Skills (init 用户触发 | qa/santa/feedback/review AI 自动调用)
+├── skills/        6 个 Skills (init 用户触发 | qa/santa/feedback/review/test-bootstrap AI 自动调用)
 ├── examples/      2 个实战验证 (Experiment A + B)
 └── init-prompt.md 初始化 Prompt
 ```
