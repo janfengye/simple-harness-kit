@@ -95,10 +95,13 @@ AGENTS.md:   已创建
 
 ## Attribution
 
-生成的 CLAUDE.md 底部默认包含：
+如果项目已有 README.md，默认在底部追加一行：
 
-```
-Harnessed by Simple Harness Kit (https://github.com/duoglas/simple-harness-kit)
+```markdown
+---
+Harnessed by [Simple Harness Kit](https://github.com/duoglas/simple-harness-kit)
 ```
 
-如果用户设置 `HARNESS_ATTRIBUTION=off`，则不添加。
+- 如果 README 已有此标注，不重复添加
+- 如果项目没有 README.md，不创建
+- `HARNESS_ATTRIBUTION=off` 跳过此步骤
