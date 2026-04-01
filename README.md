@@ -39,37 +39,39 @@
 
 ### 快速开始
 
-在你的项目中启动 AI Agent，输入：
+#### 第一次：初始化（每个项目只做一次）
 
+方式 A — 直接告诉 AI：
 ```
 读取 ~/path/to/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-这是我的项目，帮我初始化 Harness 并开发以下需求：
-[描述你的需求]
+帮我初始化 Harness。
 ```
 
-AI 会自动扫描项目的技术栈、构建方式、测试框架等信息，然后：
-1. 生成 Rules / Hooks / Constraints / Settings（② SETUP）
-2. 按 6 阶段 Loop 执行你的需求
-3. 全过程记录到 `.harness/session-log.md`
-
-或安装 Skills 后用斜杠命令触发：
+方式 B — 安装 Skill 后用命令：
 ```bash
-cp -r skills/* ~/.claude/skills/
+cp -r skills/* ~/.claude/skills/    # 只需装一次
+```
+然后在项目中输入 `/harness-init`。
+
+两种方式效果一样——AI 自动扫描项目 → 生成 Rules/Hooks/Constraints → 实弹测试 Hook → 完成。
+
+#### 之后：直接说需求
+
+Harness 初始化后，Rules 和 Hooks 已经写在项目的 `.claude/` 里了。**每次开新 session 自动加载，不需要任何额外命令。**
+
+```
+帮我实现用户可以拖拽调整任务优先级，拖拽结束后自动保存，失败时回滚。
 ```
 
-然后在任何项目中输入 `/harness-init`，AI 会：
-1. **自动扫描**项目结构，识别技术栈和构建方式
-2. **问你**缺少的信息（比如风险等级、已知问题）
-3. **生成**全套配置：Rules + Hooks + Constraints + Settings
-4. **实弹测试** Hook 拦截，确认生效
+AI 自动按 6 阶段 Loop 执行：PLAN → TDD 实现 → QA 验证 → Review → commit。
 
-初始化完成后，**直接说需求就行**：
 ```
-帮我实现 [你的需求]
+[Harness 反馈] 拖拽在移动端不生效，触摸事件没有处理。
 ```
-AI 会自动按 6 阶段 Loop 执行。不需要其他命令——QA、Review、Feedback 都在流程中自动触发。
 
-> `/harness-init` 是唯一需要手动触发的命令。其余 Skill（qa/santa/feedback/review）是 AI 的参考手册，它会在合适的阶段自动调用，用户无需关心。
+AI 自动走 F1-F5：记录 → 提炼规则 → 写入 constraints → 修复。
+
+> **用户只需要说做什么。** 怎么走流程、什么时候跑 QA、什么时候触发 Review——全由 Rules 和 Hooks 自动驱动。
 
 ---
 
