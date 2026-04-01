@@ -17,6 +17,7 @@
 | **规则遗忘** | 长对话后 Agent 忽略约束 | Hook 强制执行（工具层 100% 拦截） |
 | **质量不稳定** | 有时好有时 bug | 5 层 QA 金字塔（AI 做 4 层，人只做终审） |
 | **经验不沉淀** | 同样问题反复出现 | Constraint ID 追溯 + F1-F5 反馈闭环 |
+| **行为无感知** | 不知道团队实际怎么用 AI | 持续学习（自动积累行为模式 → 发现改进机会） |
 
 ### 核心机制
 
@@ -33,7 +34,9 @@
 
 **Hook 强制执行：** 7 个内置 Hook，在工具层 100% 拦截——safety-guard | agent-check | verification-gate | commit-check | delivery-review | context-monitor | session-logger
 
-详见 [methodology/](methodology/) 全部 13 篇文档。
+**持续学习：** 开发过程中 Hook 自动记录行为数据（<50ms 无感知），每轮 Loop 结束时自动分析——发现工具使用模式、高频修改文件（可能缺测试）、稳定行为可提炼为 Rule（减少 token 消耗）。不调 AI API，纯本地分析。
+
+详见 [methodology/](methodology/) 全部 14 篇文档。
 
 ---
 
@@ -198,7 +201,18 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 **Santa Method 发现的 8 个深层问题：** aria-live 条件渲染、`<img>` 未用 Next Image、缺少组合 E2E、缺少 `role="group"`、index 作 React key、废弃组件未删、缺 useMemo、无效 HTML 嵌套。常规 Code Review 很难同时发现这些。
 
-> 详见 [examples/experiment-b/](examples/experiment-b/)
+**功能交付验收截图：**
+
+| 场景 | 说明 |
+|------|------|
+| 初始状态 | 搜索框 + 分类标签（All/Art/Sculptures/Street art），All 默认选中 |
+| 搜索过滤 | 输入 "secret" 实时过滤，只显示标题含 "Secret Garden" 的文章 |
+| 分类筛选 | 点击 Sculptures，按钮变为选中态，只显示该分类文章 |
+| 搜索+筛选组合 | Sculptures 分类 + 搜索 "museum"，两个条件 AND 组合生效 |
+| 空状态 | 搜索无结果时显示 "No articles found" 提示 |
+| 移动端适配 | 375px 下搜索框全宽，标签自动换行，单列文章布局 |
+
+> 详见 [examples/experiment-b/](examples/experiment-b/)（含 session-log、QA 报告、constraints、code diff）
 
 #### 对比
 
@@ -304,7 +318,8 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 | `HARNESS_LOG` | `off` | 关闭 session-log 自动记录（其他 Hook 不受影响） |
 | `HARNESS_AUTO` | `full` | 全程自动，PLAN 也不暂停 |
 | `HARNESS_AUTO` | `off` | 每个阶段都暂停等用户确认 |
-| *(默认)* | — | PLAN 完成后暂停确认，其余阶段自动 |
+| `HARNESS_LEARN` | `off` | 关闭 observations.jsonl（session-log.md 仍记录） |
+| *(默认)* | — | PLAN 完成后暂停确认，其余阶段自动，持续学习开启 |
 
 ```bash
 # 全自动模式（适合 CI/批量任务）
@@ -321,9 +336,9 @@ HARNESS_AUTO=off claude
 
 ```
 simple-harness-kit/
-├── methodology/   13 篇方法论文档
+├── methodology/   14 篇方法论文档
 ├── templates/     5 规则模板 + 7 Hook 脚本 + 4 配置模板
-├── skills/        6 个 Skills (init 用户触发 | qa/santa/feedback/review/test-bootstrap AI 自动调用)
+├── skills/        7 个 Skills (init 用户触发 | qa/santa/feedback/review/test-bootstrap/learn AI 自动调用)
 ├── examples/      2 个实战验证 (Experiment A + B)
 └── init-prompt.md 初始化 Prompt
 ```
@@ -347,6 +362,7 @@ A portable, tool-agnostic **Harness Engineering** methodology + template repo.
 | Rule drift in long conversations | Hook enforcement (100% tool-level interception) |
 | Unstable code quality | 5-Layer QA Pyramid (AI does 4 layers, humans do final review) |
 | No knowledge accumulation | Constraint ID tracing + F1-F5 feedback loops |
+| Blind to actual behavior | Continuous learning (auto-captures patterns → improvement suggestions) |
 
 ### Quick Start
 
@@ -365,6 +381,7 @@ The AI scans your tech stack automatically and generates Rules, Hooks, Constrain
 - **6-Stage Loop:** Plan → Setup → Execute → Verify → Review → Feedback
 - **5-Layer QA:** TDD → Tool checks → Spec review (independent) → Santa Method (dual adversarial) → Human review
 - **7 Hooks:** safety-guard, agent-check, verification-gate, commit-check, delivery-review, context-monitor, session-logger
+- **Continuous Learning:** Auto-captures tool usage patterns (<50ms overhead), analyzes at each Loop's REVIEW stage. Pure local analysis, zero API calls.
 
 ### Real-World Validation
 

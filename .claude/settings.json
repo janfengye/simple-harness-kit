@@ -1,0 +1,57 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
+        ],
+        "description": "拦截危险命令"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/commit-check.js" }
+        ],
+        "description": "AI commit 检查 Co-Authored-By + 未提交变更提醒"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+        ],
+        "description": "上下文预算监控"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+        ],
+        "description": "上下文预算监控"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录工具调用到 session-log + observations"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录文件编辑"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录文件创建"
+      }
+    ]
+  }
+}
