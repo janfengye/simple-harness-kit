@@ -188,72 +188,57 @@ AI 读代码 → 理解行为 → 生成测试 → 运行 → 报告覆盖率和
 
 ### 使用场景实例
 
-#### 场景 1：新项目初始化
+#### 场景 1：新项目初始化 Harness
 
-```bash
-# 1. 创建项目
-mkdir my-app && cd my-app && npm init -y && git init
+在你已经创建好的项目目录中，启动 AI Agent：
 
-# 2. 启动 Claude Code
-claude
-
-# 3. 初始化 Harness
+```
 > 读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-> 我的项目信息：
-> - 名称: my-app
-> - 描述: React + TypeScript 的任务管理应用
-> - 技术栈: React 19 + TypeScript + Vite + Vitest + Playwright
-> - 构建命令: npm run build
-> - 测试命令: npm test
-> - 风险等级: 中
+> 项目: my-app, React + TypeScript 的任务管理应用
+> 技术栈: React 19 + TypeScript + Vite + Vitest + Playwright
 > 帮我生成完整的 Harness 配置。
 ```
 
-AI 会生成：
+AI 生成：
 ```
 .claude/rules/        ← 5 个规则文件
 scripts/hooks/        ← 7 个 Hook 脚本
-docs/constraints.md   ← 约束系统（初始模板）
+docs/constraints.md   ← 约束系统
 .claude/settings.json ← Hook 配置
-CLAUDE.md             ← 项目说明
 ```
 
-然后故意测一下 Hook：
+验证 Hook 生效——故意触发一次：
 ```
 > rm -rf /
-[Safety Guard] 禁止删除根目录或 home 目录   ← Hook 拦截成功
+[Safety Guard] 禁止删除根目录或 home 目录   ← 拦截成功
 ```
 
-#### 场景 2：日常开发一个功能
+#### 场景 2：开发一个功能
 
-```bash
-# 已有 Harness 的项目，开始开发新功能
-claude
+在已有 Harness 的项目中：
 
+```
 > 按照 Harness 的 6 阶段 Loop，帮我实现用户登录功能。
 > 需求：
 > - 邮箱+密码登录表单
-> - 输入验证（Zod schema）
-> - 提交后调用 /api/auth/login
+> - 输入验证
+> - 提交后调用登录 API
 > - 成功跳转首页，失败显示错误
-> - E2E 测试覆盖正常登录和错误场景
 ```
 
 AI 自动按流程执行：
 ```
-① PLAN: 拆解为 4 个任务（表单组件→API 对接→错误处理→E2E 测试）
-③ EXECUTE: TDD 开发，先写失败测试
-④ VERIFY: Layer 2 (Build/Lint/Test PASS) → Layer 3 (Spec Review PASS)
-⑤ REVIEW: 5 项复盘 ✓
-→ commit（自动带 Co-Authored-By）
+① PLAN: 拆解任务
+③ EXECUTE: TDD — 先写失败测试再实现
+④ VERIFY: Build/Lint/Test 全过 → 独立 Reviewer 检查 Spec 合规
+⑤ REVIEW: 5 项复盘 ✓ → commit（自动带 Co-Authored-By）
 ```
 
-#### 场景 3：处理用户反馈
+用户全程只需要：给需求 → 看 QA 报告 → 做最终验收。
 
-```bash
-# 用户/测试/Review 说"搜索结果不对"
-claude
+#### 场景 3：处理反馈
 
+```
 > [Harness 反馈]
 > 问题：搜索中文时结果为空，但文章标题确实包含搜索词
 > 场景：/magazine 页面的搜索框
@@ -262,31 +247,28 @@ claude
 
 AI 按 F1-F5 执行：
 ```
-F1: 记录原话 → "搜索中文时结果为空"
-F2: 分类 → 工具层（src/ 逻辑 bug）
-F3: 提炼规则 → "搜索必须支持 Unicode 字符，包括中文、日文、韩文"
-F4: 写入 → C-SEARCH-04 到 docs/constraints.md
-F5: 派 Agent → "修复 C-SEARCH-04 违规，扫描所有搜索逻辑"
+F1: 记录原话
+F2: 分类 → 工具层 bug
+F3: 提炼规则 → "搜索必须支持 Unicode 字符"
+F4: 写入 → C-SEARCH-04 到 constraints.md
+F5: 派 Agent 按规则修复 + 自验
 ```
+
+用户只需要描述问题，规则提炼和修复全由 AI 完成。
 
 #### 场景 4：给已有项目加装 Harness
 
-```bash
-# 项目已有 5000 行代码，但只有 10% 测试覆盖
-claude
-
+```
 > 读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-> 补充信息：
-> - 已有测试覆盖率：10%（仅核心模块有单测）
-> - 已有 CI/CD：GitHub Actions（build + lint）
+> 这个项目已经有代码了，补充信息：
+> - 已有测试覆盖率约 10%（仅核心模块有单测）
 > - 需要重点约束的目录：src/api/, src/auth/
 > - 已知的质量问题：auth 模块没有错误处理，API 响应格式不一致
->
-> 帮我加装 Harness，并把已知的质量问题写入初始 constraints。
+> 帮我加装 Harness，把已知问题写入初始 constraints。
 ```
 
 AI 会：
-1. 生成 Harness 配置，但**不要求立即达到 80% 覆盖率**
+1. 生成 Harness 配置（不要求立即达到 80% 覆盖率）
 2. 把已知问题写入 constraints.md（如 `C-API-01: API 响应必须使用统一格式`）
 3. QA 标准设为渐进式：当前覆盖率基准 10%，每次 commit 不降低
 
