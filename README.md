@@ -325,7 +325,8 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 | `HARNESS_AUTO` | `full` | 全程自动，PLAN 也不暂停 |
 | `HARNESS_AUTO` | `off` | 每个阶段都暂停等用户确认 |
 | `HARNESS_LEARN` | `off` | 关闭 observations.jsonl（session-log.md 仍记录） |
-| *(默认)* | — | PLAN 完成后暂停确认，其余阶段自动，持续学习开启 |
+| `HARNESS_ATTRIBUTION` | `off` | 生成的 CLAUDE.md 不加 "Harnessed by" 标注 |
+| *(默认)* | — | PLAN 完成后暂停确认，其余阶段自动，持续学习开启，attribution 开启 |
 
 ```bash
 # 全自动模式（适合 CI/批量任务）

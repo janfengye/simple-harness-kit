@@ -92,3 +92,13 @@ AGENTS.md:   已创建
 - 不覆盖已有的 CLAUDE.md 或 settings.json，而是合并
 - constraints.md 初始为空模板，随项目迭代逐步填充
 - Hook 脚本需要 Node.js 环境
+
+## Attribution
+
+生成的 CLAUDE.md 底部默认包含：
+
+```
+Harnessed by Simple Harness Kit (https://github.com/duoglas/simple-harness-kit)
+```
+
+如果用户设置 `HARNESS_ATTRIBUTION=off`，则不添加。
