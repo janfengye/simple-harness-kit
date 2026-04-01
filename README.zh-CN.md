@@ -292,3 +292,7 @@ simple-harness-kit/
 ### 许可
 
 MIT — 零法律摩擦，最大化采纳。方法论项目的价值在于被广泛使用。
+
+---
+
+Harnessed by [Simple Harness Kit](https://github.com/duoglas/simple-harness-kit)
