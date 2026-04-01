@@ -1,5 +1,20 @@
 # Session Log：全过程记录机制
 
+## 关闭日志
+
+Session Log 默认开启。如果不需要记录（探索性原型、一次性脚本），设置环境变量关闭：
+
+```bash
+HARNESS_LOG=off claude
+```
+
+关闭后：
+- session-logger.js Hook 跳过记录（直接透传）
+- AI 不需要主动记录 session-log
+- 其他 Hook（safety-guard、verification-gate 等）**不受影响**，仍然正常拦截
+
+> 注意：关闭日志意味着放弃偏差采集能力。如果你在团队推广阶段或验证方法论阶段，建议保持开启。
+
 ## 为什么要记录
 
 没有完整记录，就无法：

@@ -7,6 +7,8 @@
  *
  * 在 AI 完成工具调用后，追加一条简要日志。
  * 这确保即使 AI "忘记"手动记录，关键动作也不会丢失。
+ *
+ * 关闭方式: 设置环境变量 HARNESS_LOG=off
  */
 
 const fs = require('fs');
@@ -22,6 +24,12 @@ process.stdin.on('data', chunk => {
 });
 
 process.stdin.on('end', () => {
+  // HARNESS_LOG=off 时跳过记录，直接透传
+  if (process.env.HARNESS_LOG === 'off') {
+    process.stdout.write(raw);
+    return;
+  }
+
   try {
     const input = JSON.parse(raw);
     const tool = input.tool_name || 'unknown';

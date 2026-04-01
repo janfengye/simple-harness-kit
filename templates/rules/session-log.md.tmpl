@@ -26,3 +26,11 @@
 `.harness/session-log.md`
 
 如果文件不存在，在第一条记录前创建并写入元信息头。
+
+## 关闭日志
+
+设置环境变量 `HARNESS_LOG=off` 可关闭 session-logger Hook 的自动记录和本规则的手动记录。
+
+关闭后：Hook 不写日志，AI 也不需要主动记录。其他 Hook（safety-guard、verification-gate 等）不受影响。
+
+适用场景：探索性原型、一次性脚本、不需要留存证据的快速任务。
