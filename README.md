@@ -210,7 +210,7 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 **Agent 编排框架**（DeerFlow / LangGraph / CrewAI / Composio）——解决"构建 Agent 平台"，需要 Python 开发和部署。我们的问题是"用 Agent 做日常开发的质量控制"，层面不同。
 
-**AI 编码工具**（Claude Code / Codex / Gemini CLI / Cursor / OpenCode / Windsurf）——2026 Q1 除 Windsurf 外全部支持 Hook 阻止。我们的 Hook 脚本可跨工具复用。详见 [methodology/01-comparison.md](methodology/01-comparison.md)
+**AI 编码工具**（Claude Code / Codex / Gemini CLI / Cursor / OpenCode / Windsurf）——2026 Q1 除 Windsurf 外全部支持 Hook 阻止（基于文档分析，仅 Claude Code 实测验证）。详见 [methodology/01-comparison.md](methodology/01-comparison.md)
 
 **方法论体系**（ECC Superpowers / Ralphinho / OpenAI Harness Eng. / GitHub Squad）——有理念有工具有 Skill，缺少把它们串成可执行流程的方法论。
 
@@ -271,14 +271,16 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 ### 工具兼容性
 
-| 工具 | Hook 兼容 | 说明 |
-|------|----------|------|
-| **Claude Code** | ✅ 原生 | .claude/settings.json |
-| **Codex CLI** | ✅ 适配 | hooks.json，有社区适配器 |
-| **Gemini CLI** | ⚠️ 协议兼容 | .gemini/settings.json，事件名需映射 |
-| **Cursor** | ✅ 兼容 | 可读 .claude/settings.json |
-| **OpenCode** | ❌ 需改写 | TypeScript 插件 API |
-| **Windsurf** | ❌ 不支持 | 无 PreToolUse 阻止能力 |
+> **说明：** 目前所有实验和指引都基于 **Claude Code** 验证。其他工具的兼容性是基于官方文档的分析推断，**尚未实测**。欢迎社区贡献其他工具的验证结果。
+
+| 工具 | Hook 能力 | 状态 | 说明 |
+|------|----------|------|------|
+| **Claude Code** | ✅ 原生 | **已验证** | 所有模板和 Skill 原生适配 |
+| **Codex CLI** | ✅ 有 | 未验证 | v0.117+ 支持 Hook，社区有 Claude 格式适配器 |
+| **Gemini CLI** | ✅ 有 | 未验证 | v0.26+ 支持 BeforeTool/AfterTool，协议兼容但配置格式不同 |
+| **Cursor** | ✅ 有 | 未验证 | v1.7+ 支持 hooks，可读 .claude/settings.json |
+| **OpenCode** | ⚠️ 插件 API | 未验证 | 有 tool.execute.before/after 但需改写为 TypeScript 插件 |
+| **Windsurf** | ❌ 仅审计 | 不支持 | 无 PreToolUse 阻止能力，无法运行完整 Harness |
 
 ### 仓库结构
 
@@ -340,7 +342,7 @@ The AI scans your tech stack automatically and generates Rules, Hooks, Constrain
 
 ### Tool Compatibility
 
-Works on: **Claude Code** (native) | **Codex CLI** (v0.117+) | **Gemini CLI** (v0.26+) | **Cursor** (v1.7+). Not supported: Windsurf.
+**Tested on:** Claude Code (all templates and skills verified). **Likely compatible** (not yet tested): Codex CLI (v0.117+), Gemini CLI (v0.26+), Cursor (v1.7+). Not supported: Windsurf.
 
 ### License
 
