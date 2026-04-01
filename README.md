@@ -205,17 +205,17 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 | 初始状态 | 搜索过滤 |
 |---------|---------|
-| ![初始状态](examples/experiment-b/screenshots/demo-1-top.png) | ![搜索过滤](examples/experiment-b/screenshots/demo-2-search-secret.png) |
+| ![初始状态](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-1-top.png) | ![搜索过滤](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-2-search-secret.png) |
 | 搜索框 + 分类标签，All 默认选中 | 输入 "secret" 实时过滤 |
 
 | 分类筛选 | 搜索+筛选组合 |
 |---------|-------------|
-| ![分类筛选](examples/experiment-b/screenshots/demo-3-sculptures.png) | ![组合](examples/experiment-b/screenshots/demo-4-combo.png) |
+| ![分类筛选](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-3-sculptures.png) | ![组合](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-4-combo.png) |
 | 点击 Sculptures 只显示该分类 | Sculptures + "museum" AND 组合 |
 
 | 空状态 | 移动端适配 |
 |--------|-----------|
-| ![空状态](examples/experiment-b/screenshots/demo-5-empty-state.png) | ![移动端](examples/experiment-b/screenshots/demo-6-mobile.png) |
+| ![空状态](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-5-empty-state.png) | ![移动端](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-6-mobile.png) |
 | 无结果显示 "No articles found" | 375px 下搜索框全宽，单列布局 |
 
 > 详见 [examples/experiment-b/](examples/experiment-b/)（含 session-log、QA 报告、constraints、code diff）
