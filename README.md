@@ -58,11 +58,18 @@ cp -r skills/* ~/.claude/skills/
 ```
 
 然后在任何项目中输入 `/harness-init`，AI 会：
-1. **自动扫描**项目的 package.json / pyproject.toml / go.mod 等，识别技术栈和构建方式
+1. **自动扫描**项目结构，识别技术栈和构建方式
 2. **问你**缺少的信息（比如风险等级、已知问题）
-3. **生成**全套配置：Rules(5) + Hooks(7) + Constraints + Settings
-4. **实弹测试**一次 Hook 拦截，确认生效
-5. 输出初始化报告，你可以直接开始开发
+3. **生成**全套配置：Rules + Hooks + Constraints + Settings
+4. **实弹测试** Hook 拦截，确认生效
+
+初始化完成后，**直接说需求就行**：
+```
+帮我实现 [你的需求]
+```
+AI 会自动按 6 阶段 Loop 执行。不需要其他命令——QA、Review、Feedback 都在流程中自动触发。
+
+> `/harness-init` 是唯一需要手动触发的命令。其余 Skill（qa/santa/feedback/review）是 AI 的参考手册，它会在合适的阶段自动调用，用户无需关心。
 
 ---
 
@@ -277,7 +284,7 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 simple-harness-kit/
 ├── methodology/   13 篇方法论文档
 ├── templates/     5 规则模板 + 7 Hook 脚本 + 4 配置模板
-├── skills/        5 个 Skills (init/qa/santa/feedback/review)
+├── skills/        5 个 Skills (init 用户触发 | qa/santa/feedback/review AI 自动调用)
 ├── examples/      2 个实战验证 (Experiment A + B)
 └── init-prompt.md 初始化 Prompt
 ```
