@@ -201,16 +201,22 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 **Santa Method 发现的 8 个深层问题：** aria-live 条件渲染、`<img>` 未用 Next Image、缺少组合 E2E、缺少 `role="group"`、index 作 React key、废弃组件未删、缺 useMemo、无效 HTML 嵌套。常规 Code Review 很难同时发现这些。
 
-**功能交付验收截图：**
+**功能交付验收：**
 
-| 场景 | 说明 |
-|------|------|
-| 初始状态 | 搜索框 + 分类标签（All/Art/Sculptures/Street art），All 默认选中 |
-| 搜索过滤 | 输入 "secret" 实时过滤，只显示标题含 "Secret Garden" 的文章 |
-| 分类筛选 | 点击 Sculptures，按钮变为选中态，只显示该分类文章 |
-| 搜索+筛选组合 | Sculptures 分类 + 搜索 "museum"，两个条件 AND 组合生效 |
-| 空状态 | 搜索无结果时显示 "No articles found" 提示 |
-| 移动端适配 | 375px 下搜索框全宽，标签自动换行，单列文章布局 |
+| 初始状态 | 搜索过滤 |
+|---------|---------|
+| ![初始状态](examples/experiment-b/screenshots/demo-1-top.png) | ![搜索过滤](examples/experiment-b/screenshots/demo-2-search-secret.png) |
+| 搜索框 + 分类标签，All 默认选中 | 输入 "secret" 实时过滤 |
+
+| 分类筛选 | 搜索+筛选组合 |
+|---------|-------------|
+| ![分类筛选](examples/experiment-b/screenshots/demo-3-sculptures.png) | ![组合](examples/experiment-b/screenshots/demo-4-combo.png) |
+| 点击 Sculptures 只显示该分类 | Sculptures + "museum" AND 组合 |
+
+| 空状态 | 移动端适配 |
+|--------|-----------|
+| ![空状态](examples/experiment-b/screenshots/demo-5-empty-state.png) | ![移动端](examples/experiment-b/screenshots/demo-6-mobile.png) |
+| 无结果显示 "No articles found" | 375px 下搜索框全宽，单列布局 |
 
 > 详见 [examples/experiment-b/](examples/experiment-b/)（含 session-log、QA 报告、constraints、code diff）
 
