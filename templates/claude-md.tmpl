@@ -48,12 +48,10 @@ PLAN → SETUP → EXECUTE → VERIFY → REVIEW → FEEDBACK
 
 ### 会话级开关
 
-如需临时关闭 Harness 模式（使用其他 skill、非开发任务等），更新 `.harness/current-stage.json`:
-```json
-{"stage":"OFF","since":"2026-04-02T00:00:00Z","reason":"使用 brainstorming skill 探索需求"}
-```
+- `/harness-off` — 临时关闭 Harness 模式（使用其他 skill、非开发任务等）
+- `/harness-on` — 重新启用 Harness 模式
 
-关闭后每次工具调用会提醒"Harness 模式已关闭"。重新启用只需将 stage 改回有效阶段（如 PLAN）。
+关闭后每次工具调用会提醒"Harness 模式已关闭"。
 
 ## Harness 规则（自动加载）
 

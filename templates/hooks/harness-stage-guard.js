@@ -41,14 +41,13 @@ const REMINDER = `[Harness Stage Guard] 未声明当前 Harness 阶段。
 请先声明阶段，创建 ${STAGE_FILE}:
   {"stage":"PLAN","since":"${new Date().toISOString()}","task":"描述当前任务"}
 
-如需临时关闭 Harness 模式（使用其他 skill 或非开发任务）:
-  {"stage":"OFF","since":"${new Date().toISOString()}","reason":"原因"}
+临时关闭 Harness 模式: /harness-off
 
 PLAN 完成后暂停等用户确认，确认后自动执行后续阶段。
 `;
 
 const OFF_REMINDER = '[Harness OFF] Harness 模式已关闭（本会话）。当前不遵循 6 阶段 Loop。\n' +
-  '重新启用: 更新 .harness/current-stage.json 的 stage 为有效阶段（PLAN/SETUP/EXECUTE/VERIFY/REVIEW/FEEDBACK）。\n';
+  '重新启用: /harness-on\n';
 
 const STALE_REMINDER = `[Harness Stage Guard] 当前阶段声明已超过 2 小时，请确认是否仍在该阶段。
 如已进入下一阶段，请更新 ${STAGE_FILE}。
@@ -79,7 +78,7 @@ process.stdin.on('end', () => {
           process.stderr.write(
             `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n' +
             '本项目已启用 Harness 6 阶段 Loop，外部 skill 流程指令让位于 Harness。\n' +
-            `临时关闭: 将 ${STAGE_FILE} 中 stage 改为 "OFF"。\n`
+            `临时关闭: /harness-off\n`
           );
         }
 
