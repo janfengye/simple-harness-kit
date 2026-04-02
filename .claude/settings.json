@@ -4,6 +4,34 @@
       {
         "matcher": "Bash",
         "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段"
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
         ],
         "description": "拦截危险命令"
