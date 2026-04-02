@@ -33,8 +33,18 @@ PLAN → SETUP → EXECUTE → VERIFY → REVIEW → FEEDBACK
 ```
 
 - PLAN 完成后暂停等用户确认，确认后自动执行后续阶段
-- 如果外部 skill 有自己的工作流指令，Harness 阶段流程优先
-- 需要使用其他 skill 的工作流时，先 `/harness-off` 临时切换
+- Harness 模式下，6 阶段 Loop 控制工作流走向
+
+### 与外部 skill 的兼容性
+
+**已知不兼容的 skill：**
+- superpowers:brainstorming — 逐个提问的流程与 PLAN 阶段冲突
+- superpowers:writing-plans — 独立计划流程与 PLAN 阶段重复
+- superpowers:executing-plans — 独立执行流程与 EXECUTE/VERIFY 阶段重复
+
+**判断其他 skill 是否兼容：** 如果一个 skill 会接管工作流走向（定义自己的多步骤流程、要求按特定顺序执行、控制何时暂停/继续），它很可能与 Harness 6 阶段 Loop 冲突。工具类 skill（如代码生成、格式化、查文档等不控制流程的）通常兼容。
+
+**遇到冲突时：** 先 `/harness-off` 关闭 Harness 模式，使用完外部 skill 后 `/harness-on` 恢复。
 
 ### 会话级开关
 
