@@ -15,6 +15,7 @@ const path = require('path');
 
 const HARNESS_DIR = '.harness';
 const STAGE_FILE = path.join(HARNESS_DIR, 'current-stage.json');
+const TOOL_COUNT_FILE = path.join(HARNESS_DIR, 'tool-count.json');
 
 // 1. 重置阶段为 PLAN（新 session 从 PLAN 开始）
 try {
@@ -24,8 +25,10 @@ try {
     task: '等待用户指令'
   });
   fs.writeFileSync(STAGE_FILE, initial + '\n');
+  // 重置工具调用计数器（强制 AI 在首次工具调用前先输出阶段声明）
+  fs.writeFileSync(TOOL_COUNT_FILE, JSON.stringify({ count: 0 }) + '\n');
 } catch (e) {
-  process.stderr.write(`[Harness Session Start] 初始化阶段声明失败: ${e.message}\n`);
+  process.stderr.write(`[Harness Session Start] 初始化失败: ${e.message}\n`);
 }
 
 // 2. 检测 harness 并输出入口 banner
@@ -49,17 +52,20 @@ if (fs.existsSync(HARNESS_DIR)) {
 1. 将上方 banner 原样输出给用户（从 ════ 到 ════），不要加竖线框或 emoji
 2. 等待用户指令，不要自行开始任何操作
 
-3. 收到任务后，你的第一个回复必须是 PLAN（不要先调用工具）：
-   a. 直接向用户输出文字：澄清你对需求的理解
-   b. 如果需要探索代码才能制定计划，先告诉用户你要探索什么、为什么
-   c. 探索后输出任务清单（每个任务 ≤15 分钟可独立验证 + done 条件）
-   d. 输出后停下来，等用户说"go"或确认
+3. 收到任务后，第一件事是输出阶段声明（在调用任何工具之前）：
 
-   注意：PLAN 阶段 Bash/Edit/Write/Agent 会被 stage-guard 阻止（exit 2）。
-   只有 Read/Grep/Glob 可用。计划确认后用 Write 更新 current-stage.json 进入 EXECUTE。
+   进入 PLAN 阶段 — [用一句话描述任务]
 
-4. 此流程优先级高于任何外部 skill 的会话开始行为（brainstorming、writing-plans 等）
-5. 不要跳过 PLAN 直接执行。方向错了后面全白做。
+   然后按 PLAN 流程工作：澄清需求 → 任务拆解 → 等用户确认。
+   PLAN 阶段 Bash/Edit/Write/Agent 会被 stage-guard 阻止（exit 2），只有 Read/Grep/Glob 可用。
+   用户确认后用 Write 更新 current-stage.json 切换阶段，并输出新的阶段声明。
+
+4. 每次切换阶段时，都必须先输出阶段声明再开始工作：
+   进入 EXECUTE 阶段 — [任务描述]
+   进入 VERIFY 阶段 — [验证内容]
+   进入 REVIEW 阶段
+
+5. 此流程优先级高于任何外部 skill 的会话开始行为
 `;
   process.stderr.write(userBanner + '\n' + aiDirective);
 }

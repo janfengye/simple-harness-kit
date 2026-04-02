@@ -32,19 +32,27 @@ const MAX_STDIN = 1024 * 1024;
 
 const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
 const PLAN_FILE = '.harness/current-plan.md';
+const TOOL_COUNT_FILE = '.harness/tool-count.json';
+
+// 首次工具调用阻止消息
+const FIRST_CALL_BLOCK = `[Harness Stage Guard] 这是本轮任务的第一次工具调用，已阻止。
+你必须先向用户输出阶段声明，再调用工具：
+
+  进入 PLAN 阶段 — [用一句话描述你理解的任务]
+
+输出声明后，再调用 Read/Grep/Glob 探索。
+`;
 
 // 读操作工具——PLAN 阶段放行
 const READ_TOOLS = ['Read', 'Grep', 'Glob'];
 
 // PLAN 阶段的阻止消息
-const PLAN_BLOCK_MSG = `[Harness Stage Guard] PLAN 阶段禁止执行写操作。
-你必须先产出计划文件再进入执行：
-  1. 用读工具（Read/Grep/Glob）了解现状
-  2. 向用户澄清需求
-  3. 用 Write 创建 .harness/current-plan.md（任务清单 + 验收标准 + done 条件）
-  4. 等用户确认后，更新 current-stage.json 进入下一阶段
+const PLAN_BLOCK_MSG = `[Harness Stage Guard] PLAN 阶段禁止此操作。
+你是否已经向用户输出了阶段声明？如果没有，先输出：
+  进入 PLAN 阶段 — [任务描述]
 
-当前只允许：Read, Grep, Glob, Write(.harness/current-plan.md), Write(.harness/current-stage.json)
+PLAN 阶段只允许：Read, Grep, Glob, Write(.harness/current-plan.md), Write(.harness/current-stage.json)
+流程：澄清需求 → 任务拆解 → 等用户确认 → Write current-stage.json 切换到 EXECUTE
 `;
 
 // 每个阶段的工作要求——通过 stderr 在每次工具调用时注入
@@ -170,8 +178,16 @@ process.stdin.on('end', () => {
         const toolName = input.tool_name || '';
         const writePath = String(input.tool_input?.file_path || '');
 
+        // 首次工具调用检查：强制 AI 先输出阶段声明
+        let toolCount = { count: 999 }; // 默认跳过（文件不存在时不阻止）
+        try { toolCount = JSON.parse(fs.readFileSync(TOOL_COUNT_FILE, 'utf8')); } catch {}
+        if (toolCount.count === 0) {
+          // 递增计数器，下次不再阻止
+          try { fs.writeFileSync(TOOL_COUNT_FILE, JSON.stringify({ count: 1 }) + '\n'); } catch {}
+          process.stderr.write(FIRST_CALL_BLOCK);
+          shouldBlock = true;
+        } else if (data.stage === 'PLAN') {
         // PLAN 阶段：硬约束——只允许读工具 + Write 计划文件/阶段文件
-        if (data.stage === 'PLAN') {
           const isReadTool = READ_TOOLS.includes(toolName);
           // 精确匹配：resolve 后比对，防止路径绕过
           const resolvedWrite = path.resolve(writePath);
