@@ -47,11 +47,44 @@ observation 积累（自动）
 instinct 生成 (置信度 0.3)
     ↓ 多次观察确认
 instinct 稳定 (置信度 0.9)
-    ↓ 建议提炼
-Rule (.claude/rules/) — session 级加载，更紧凑
+    ↓ --promote 自动晋升
+Rule (.claude/rules/learned-*.md) — session 级加载，更紧凑
     ↓ 如果可以工具级强制
 Hook (脚本) — 零 token，100% 可靠
 ```
+
+## 自动晋升（--promote）
+
+置信度 ≥ 0.9 且未晋升的 instinct，通过 `node scripts/hooks/harness-learn.js --promote` 自动生成 Rule 文件：
+
+```bash
+node scripts/hooks/harness-learn.js --promote
+
+# 输出:
+# 晋升 1 个稳定 instinct 为 Rule:
+#   promoted: grep-read-edit (0.92) → .claude/rules/learned-grep-read-edit.md
+```
+
+**生成的 Rule 文件格式：**
+
+```markdown
+# 工具序列模式: Grep → Read → Edit
+
+> 自动从行为数据晋升（instinct grep-read-edit，置信度 0.92，25 次观察）
+
+此模式在开发过程中稳定出现。遵循此序列可以提高效率。
+
+- **模式:** Grep → Read → Edit
+- **晋升时间:** 2026-04-02
+```
+
+**晋升后：**
+- instinct 标记 `promoted: true`，不再重复晋升
+- Rule 文件在新 session 开头自动加载（.claude/rules/ 下所有 .md 文件）
+- instinct 的 token 开销（每次推理都在上下文中）转移为 Rule 的一次性加载开销
+
+**Token 节省量估算：**
+一个 instinct 在上下文中大约占 50-100 tokens，每次工具调用都会被处理。晋升为 Rule 后只在 session 开头加载一次（约 30 tokens），后续不再消耗。如果一个 session 有 100 次工具调用，单个 instinct 的晋升大约节省 5000-10000 tokens。
 
 ## Instinct 粒度（团队场景）
 

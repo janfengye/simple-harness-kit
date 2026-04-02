@@ -144,6 +144,60 @@ function confidenceFromCount(count) {
   return 0.3;
 }
 
+// ── 晋升 instinct → Rule ──
+
+const RULES_DIR = '.claude/rules';
+
+function promoteToRule(instinct) {
+  if (!fs.existsSync(RULES_DIR)) fs.mkdirSync(RULES_DIR, { recursive: true });
+
+  const ruleFileName = `learned-${instinct.id}.md`;
+  const rulePath = path.join(RULES_DIR, ruleFileName);
+
+  // 根据 instinct 类型生成 Rule 内容
+  let ruleContent = '';
+  if (instinct.type === 'tool-sequence') {
+    ruleContent = `# 工具序列模式: ${instinct.trigger}
+
+> 自动从行为数据晋升（instinct ${instinct.id}，置信度 ${instinct.confidence}，${instinct.observations} 次观察）
+
+此模式在开发过程中稳定出现。遵循此序列可以提高效率。
+
+- **模式:** ${instinct.trigger}
+- **晋升时间:** ${new Date().toISOString().slice(0, 10)}
+`;
+  } else if (instinct.type === 'tool-pair') {
+    ruleContent = `# 工具对模式: ${instinct.trigger}
+
+> 自动从行为数据晋升（instinct ${instinct.id}，置信度 ${instinct.confidence}，${instinct.observations} 次观察）
+
+此工具调用对在开发过程中稳定出现。
+
+- **模式:** ${instinct.trigger}
+- **晋升时间:** ${new Date().toISOString().slice(0, 10)}
+`;
+  } else {
+    ruleContent = `# 行为模式: ${instinct.trigger}
+
+> 自动从行为数据晋升（instinct ${instinct.id}，置信度 ${instinct.confidence}，${instinct.observations} 次观察）
+
+- **模式:** ${instinct.trigger}
+- **晋升时间:** ${new Date().toISOString().slice(0, 10)}
+`;
+  }
+
+  fs.writeFileSync(rulePath, ruleContent);
+
+  // 标记 instinct 为已晋升
+  const instinctPath = path.join(INSTINCTS_DIR, `${instinct.id}.json`);
+  instinct.promoted = true;
+  instinct.promotedAt = new Date().toISOString();
+  instinct.rulePath = rulePath;
+  fs.writeFileSync(instinctPath, JSON.stringify(instinct, null, 2));
+
+  return { action: 'promoted', rulePath };
+}
+
 // ── 生成报告 ──
 
 function generateReport(obs, sequences, pairs, hotFiles, instincts) {
@@ -251,14 +305,15 @@ function main() {
   }
 
   if (isPromote) {
-    const stable = allInstincts.filter(i => i.confidence >= 0.9);
+    const stable = allInstincts.filter(i => i.confidence >= 0.9 && !i.promoted);
     if (stable.length > 0) {
-      console.log(`\n以下 ${stable.length} 个 instinct 建议提炼为 Rule:`);
+      console.log(`\n晋升 ${stable.length} 个稳定 instinct 为 Rule:`);
       for (const i of stable) {
-        console.log(`  ${i.id} (${i.confidence}) — ${i.trigger}`);
+        const result = promoteToRule(i);
+        console.log(`  ${result.action}: ${i.id} (${i.confidence}) → ${result.rulePath}`);
       }
     } else {
-      console.log('\n暂无达到晋升条件（≥0.9）的 instinct。');
+      console.log('\n暂无达到晋升条件（≥0.9 且未晋升）的 instinct。');
     }
   }
 }
