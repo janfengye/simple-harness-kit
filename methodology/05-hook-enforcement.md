@@ -36,7 +36,22 @@ Hook 返回值：
 
 ## 核心 Hook 清单
 
-### 0. Session Logger（全过程记录）
+### 0. Harness Stage Guard（阶段声明强制）
+
+**触发：** PreToolUse:Bash, PreToolUse:Edit, PreToolUse:Write, PreToolUse:Agent
+**作用：** 强制 Agent 在新 session 中声明当前 Harness 阶段
+
+```javascript
+// 检查 .harness/current-stage.json 是否存在
+// 不存在 → stderr 输出 Harness 6 阶段 Loop 提醒
+// 存在但超过 2 小时 → 提醒确认阶段是否仍然正确
+```
+
+**为什么排在第一位：** Rules 和 CLAUDE.md 级别的流程指令容易被其他 prompt（如外部 skill）覆盖。Hook 在工具调用管道上拦截，优先级高于所有 LLM 层面的指令。实测证明：即使项目已有完整方法论文档，新 session 仍可能不遵守 Harness 流程——这是 LLM 注意力机制的固有特性，必须用 Hook 兜底。
+
+> **实战经验（Experiment C 准备阶段）：** 新 session 被外部 brainstorming skill 覆盖，连续多轮问答而不进入 Harness 6 阶段 Loop。CLAUDE.md 中的流程指令完全失效。此 Hook 专门解决这个问题。
+
+### 0.5 Session Logger（全过程记录）
 
 **触发：** PostToolUse:Agent, PostToolUse:Bash, PostToolUse:Edit, PostToolUse:Write
 **作用：** 每次工具调用后自动追加日志到 `.harness/session-log.md`
@@ -166,6 +181,30 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
 {
   "hooks": {
     "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [

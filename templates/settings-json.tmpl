@@ -4,6 +4,34 @@
       {
         "matcher": "Bash",
         "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
         ],
         "description": "拦截危险命令（rm -rf, force push, DROP TABLE 等）"
@@ -50,7 +78,6 @@
         ],
         "description": "上下文预算监控，超阈值提醒 compact"
       }
-    ]
     ],
     "PostToolUse": [
       {
