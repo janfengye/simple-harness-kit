@@ -261,47 +261,157 @@ function generateReport(obs, sequences, pairs, hotFiles, instincts) {
   return lines.join('\n');
 }
 
+// ── 周期性报告 ──
+
+const PERIODIC_DIR = '.harness/reports';
+
+function generatePeriodicReport(allObs, periodObs, periodDays, sequences, pairs, hotFiles, instinctsBefore, instinctsAfter) {
+  const now = new Date();
+  const since = new Date(now - periodDays * 24 * 60 * 60 * 1000);
+  const lines = [];
+
+  lines.push('# 开发效率周期报告');
+  lines.push(`\n期间: ${since.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)} (${periodDays} 天)`);
+  lines.push(`本期观察: ${periodObs.length} 条 | 全量: ${allObs.length} 条`);
+
+  // Instinct 变化
+  const beforeIds = new Set(instinctsBefore.map(i => i.id));
+  const newInstincts = instinctsAfter.filter(i => !beforeIds.has(i.id));
+  const updatedInstincts = instinctsAfter.filter(i => {
+    const before = instinctsBefore.find(b => b.id === i.id);
+    return before && before.confidence !== i.confidence;
+  });
+  const promoted = instinctsAfter.filter(i => i.promoted && !instinctsBefore.find(b => b.id === i.id && b.promoted));
+
+  lines.push('\n## Instinct 变化');
+  lines.push(`- 新增: ${newInstincts.length}`);
+  lines.push(`- 置信度变化: ${updatedInstincts.length}`);
+  lines.push(`- 已晋升为 Rule: ${promoted.length}`);
+
+  if (newInstincts.length > 0) {
+    lines.push('\n### 新发现的模式');
+    for (const i of newInstincts) {
+      lines.push(`- **${i.id}** (${i.confidence}) — ${i.trigger}`);
+    }
+  }
+
+  // 高频模式
+  if (pairs.length > 0 || sequences.length > 0) {
+    lines.push('\n## 高频模式（本期）');
+    for (const p of pairs.slice(0, 5)) {
+      lines.push(`- "${p.pattern}" — ${p.count} 次`);
+    }
+    for (const s of sequences.slice(0, 3)) {
+      lines.push(`- "${s.pattern}" — ${s.count} 次`);
+    }
+  }
+
+  // 高频文件
+  if (hotFiles.length > 0) {
+    lines.push('\n## 高频修改文件');
+    for (const f of hotFiles.slice(0, 5)) {
+      lines.push(`- \`${f.file}\` — ${f.count} 次修改`);
+    }
+  }
+
+  // Token 优化
+  const promotable = instinctsAfter.filter(i => i.confidence >= 0.9 && !i.promoted);
+  if (promotable.length > 0) {
+    lines.push('\n## Token 优化机会');
+    lines.push(`${promotable.length} 个 instinct 已稳定（≥0.9），可运行 \`--promote\` 晋升为 Rule:`);
+    for (const i of promotable) {
+      lines.push(`- **${i.id}** (${i.confidence}) — ${i.trigger}`);
+    }
+  }
+
+  // 改进建议
+  lines.push('\n## 改进建议');
+  if (hotFiles.length > 0) {
+    lines.push(`- \`${hotFiles[0].file}\` 修改了 ${hotFiles[0].count} 次 — 建议确认测试覆盖`);
+  }
+  if (sequences.some(s => s.pattern.includes('Bash') && s.count > 5)) {
+    lines.push('- 频繁使用 Bash — 考虑是否可以用专用工具替代');
+  }
+  if (promotable.length > 0) {
+    lines.push(`- ${promotable.length} 个 instinct 可晋升 — 运行 \`node scripts/hooks/harness-learn.js --promote\``);
+  }
+  if (periodObs.length < 20) {
+    lines.push('- 本期数据量偏少，模式识别可能不准确');
+  }
+
+  return lines.join('\n');
+}
+
 // ── 主流程 ──
 
 function main() {
   const args = process.argv.slice(2);
   const isReport = args.includes('--report');
   const isPromote = args.includes('--promote');
+  const periodicIdx = args.indexOf('--periodic');
+  const periodDays = periodicIdx !== -1 ? parseInt(args[periodicIdx + 1], 10) || 7 : 0;
 
-  const obs = loadObservations();
-  if (obs.length < 10) {
-    console.log(`观察数据仅 ${obs.length} 条，建议积累 20+ 条后再分析。`);
-    if (obs.length === 0) console.log('提示: 确认 session-logger Hook 已启用且 HARNESS_LEARN !== off');
+  const allObs = loadObservations();
+  if (allObs.length < 10) {
+    console.log(`观察数据仅 ${allObs.length} 条，建议积累 20+ 条后再分析。`);
+    if (allObs.length === 0) console.log('提示: 确认 session-logger Hook 已启用且 HARNESS_LEARN !== off');
     return;
   }
 
+  // 周期性报告：只分析时间窗口内的数据
+  const cutoff = periodDays > 0 ? new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000) : null;
+  const obs = cutoff ? allObs.filter(o => new Date(o.t) >= cutoff) : allObs;
+
+  if (periodDays > 0 && obs.length < 5) {
+    console.log(`本期（${periodDays} 天）仅 ${obs.length} 条观察，数据不足。使用全量数据分析。`);
+  }
+
+  const instinctsBefore = loadInstincts();
   const sequences = analyzeToolSequences(obs);
   const pairs = analyzeToolPairs(obs);
   const hotFiles = analyzeHotFiles(obs);
-  const existingInstincts = loadInstincts();
 
-  // 生成/更新 instincts
+  // 生成/更新 instincts（始终用全量数据）
+  const allSequences = cutoff ? analyzeToolSequences(allObs) : sequences;
+  const allPairs = cutoff ? analyzeToolPairs(allObs) : pairs;
+
   const changes = [];
-  for (const s of sequences.slice(0, 5)) {
+  for (const s of allSequences.slice(0, 5)) {
     const id = s.pattern.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     changes.push(upsertInstinct(id, s));
   }
-  for (const p of pairs.slice(0, 5)) {
+  for (const p of allPairs.slice(0, 5)) {
     const id = p.pattern.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     changes.push(upsertInstinct(id, p));
   }
 
-  // 报告
   const allInstincts = loadInstincts();
-  const report = generateReport(obs, sequences, pairs, hotFiles, allInstincts);
-  fs.writeFileSync(REPORT_FILE, report);
 
-  if (isReport) {
-    console.log(report);
+  // 周期性报告
+  if (periodDays > 0) {
+    const periodicReport = generatePeriodicReport(allObs, obs, periodDays, sequences, pairs, hotFiles, instinctsBefore, allInstincts);
+
+    if (!fs.existsSync(PERIODIC_DIR)) fs.mkdirSync(PERIODIC_DIR, { recursive: true });
+    const reportFile = path.join(PERIODIC_DIR, `${new Date().toISOString().slice(0, 10)}-${periodDays}d.md`);
+    fs.writeFileSync(reportFile, periodicReport);
+
+    if (isReport) {
+      console.log(periodicReport);
+    } else {
+      console.log(`周期报告（${periodDays} 天）: ${reportFile}`);
+    }
   } else {
-    console.log(`分析完成: ${obs.length} 条观察 → ${changes.filter(c => c.action === 'created').length} 个新 instinct, ${changes.filter(c => c.action === 'updated').length} 个更新`);
-    console.log(`报告: ${REPORT_FILE}`);
-    console.log(`Instincts: ${INSTINCTS_DIR}/`);
+    // 常规报告
+    const report = generateReport(allObs, sequences, pairs, hotFiles, allInstincts);
+    fs.writeFileSync(REPORT_FILE, report);
+
+    if (isReport) {
+      console.log(report);
+    } else {
+      console.log(`分析完成: ${allObs.length} 条观察 → ${changes.filter(c => c.action === 'created').length} 个新 instinct, ${changes.filter(c => c.action === 'updated').length} 个更新`);
+      console.log(`报告: ${REPORT_FILE}`);
+      console.log(`Instincts: ${INSTINCTS_DIR}/`);
+    }
   }
 
   if (isPromote) {

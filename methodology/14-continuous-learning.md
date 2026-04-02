@@ -100,6 +100,28 @@ node scripts/hooks/harness-learn.js --promote
 
 个人习惯不污染项目级。只有多个开发者独立形成相同模式，才值得提升。
 
+## 周期性分析报告
+
+```bash
+# 最近 7 天的报告
+node scripts/hooks/harness-learn.js --periodic 7 --report
+
+# 最近 30 天
+node scripts/hooks/harness-learn.js --periodic 30
+
+# 报告保存到 .harness/reports/YYYY-MM-DD-Nd.md
+```
+
+报告内容：
+- 本期观察数据量
+- Instinct 变化（新增、置信度变化、已晋升）
+- 高频工具模式（本期）
+- 高频修改文件
+- Token 优化机会（可晋升的 instinct）
+- 改进建议
+
+适合每周或每月运行一次，观察团队 AI 使用模式的变化趋势。
+
 ## 关闭
 
 - `HARNESS_LOG=off` — 关闭所有记录
