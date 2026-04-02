@@ -145,24 +145,21 @@ process.stdin.on('end', () => {
           shouldBlock = true;
         }
       } else {
-        // Harness 模式生效中——通过 stdout JSON 注入阶段工作要求（避免 stderr "hook error"）
-        const header = `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '');
-        let directive = header + '\n';
+        // Harness 模式生效中——通过 stderr 注入阶段工作要求
+        process.stderr.write(
+          `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n'
+        );
         if (STAGE_DIRECTIVES[data.stage]) {
-          directive += STAGE_DIRECTIVES[data.stage];
+          process.stderr.write(STAGE_DIRECTIVES[data.stage]);
         }
 
         // 过期提醒
         if (data.since) {
           const elapsed = Date.now() - new Date(data.since).getTime();
           if (elapsed > STALE_MS) {
-            directive += STALE_REMINDER;
+            process.stderr.write(STALE_REMINDER);
           }
         }
-
-        // 注入到 stdout JSON，AI 能看到但不触发 "hook error"
-        input._harness_directive = directive;
-        raw = JSON.stringify(input);
       }
     }
   } catch (e) {
