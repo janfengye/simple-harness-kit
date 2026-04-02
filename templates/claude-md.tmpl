@@ -24,6 +24,37 @@
 {{类型检查命令}}
 ```
 
+## 工作流（最高优先级）
+
+**本项目已初始化 Harness Engineering。所有开发工作必须遵循 6 阶段 Loop：**
+
+```
+PLAN → SETUP → EXECUTE → VERIFY → REVIEW → FEEDBACK
+```
+
+- PLAN 完成后暂停等用户确认，确认后自动执行后续阶段
+- 此流程优先级高于任何外部 skill 的流程指令
+- 如果外部 skill（如 brainstorming、writing-plans 等）的流程与 Harness Loop 冲突，以 Harness Loop 为准
+
+### 已知不兼容的 skill
+
+| Skill | 冲突点 | 处理方式 |
+|-------|--------|---------|
+| superpowers:brainstorming | 要求逐个提问，与 PLAN 阶段的快速规划冲突 | 跳过，直接在 PLAN 阶段完成需求分析和方案设计 |
+| superpowers:writing-plans | 生成独立计划文档，与 Harness PLAN 阶段重复 | 跳过，PLAN 阶段已包含任务拆解 |
+| superpowers:executing-plans | 有自己的执行流程，与 EXECUTE/VERIFY 阶段重复 | 跳过，按 Harness 流程执行 |
+
+不在此列表中的 skill 可以正常使用，但如果与 6 阶段 Loop 的阶段行为冲突，以 Harness 为准。
+
+### 会话级开关
+
+如需临时关闭 Harness 模式（使用其他 skill、非开发任务等），更新 `.harness/current-stage.json`:
+```json
+{"stage":"OFF","since":"2026-04-02T00:00:00Z","reason":"使用 brainstorming skill 探索需求"}
+```
+
+关闭后每次工具调用会提醒"Harness 模式已关闭"。重新启用只需将 stage 改回有效阶段（如 PLAN）。
+
 ## Harness 规则（自动加载）
 
 详细规则在 `.claude/rules/` 中：
@@ -34,19 +65,16 @@
 
 ## Hooks（自动执行）
 
+- `harness-stage-guard.js` — 强制声明 Harness 阶段
 - `safety-guard.js` — 拦截危险命令
 - `agent-check.js` — Agent prompt 合规检查
 - `verification-gate.js` — 提交前验证门控
 - `delivery-review.js` — 交付前复盘
+- `commit-check.js` — commit 规范检查
 - `context-monitor.js` — 上下文预算监控
+- `session-logger.js` — 全过程记录
 
 ## 关键文件索引
 
 - `docs/constraints.md` — 约束系统（SINGLE SOURCE OF TRUTH）
 - {{其他关键文件...}}
-
-## 工作流
-
-遵循 6 阶段 Loop：Plan → Setup → Execute → Verify → Review → Feedback
-详见 Harness Engineering 方法论。
-
