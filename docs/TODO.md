@@ -6,6 +6,7 @@
 - [ ] **Skill 便捷分发** — 当前逐个 `claude skill install <path>` 太麻烦。方向：`npx harness-kit install` 一键安装，或 skill 市场机制。
 - [ ] **低测试覆盖项目 TDD 策略 (M-12)** — 方法论需要对测试基础设施弱的项目给出分级指导
 - [ ] **e2e 环境搭建指南 (M-13)** — init 时检测 docker-compose 等配置，生成快速启动指南
+- [ ] **Release 时同步模板到本项目** — release 流程中自动将 templates/ 下的更新同步到本项目的 scripts/hooks/ 和 .claude/settings.json（dogfooding 保鲜）
 
 ## 持续学习改进（设计文档: docs/design/continuous-learning-improvements.md）
 
