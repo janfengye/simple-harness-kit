@@ -143,18 +143,36 @@
 
 ## 工具对比（Phase 2 后补充）
 
-| 维度 | Claude Code | Codex |
+| 维度 | Claude Code | Codex (gpt-5.4) |
 |------|------------|-------|
-| init 生成质量 | 好（14 文件，无需人工调整） | — |
-| 6 阶段完整度 | 5/6（FEEDBACK 未触发） | — |
-| QA 覆盖层数 | 4/5 | — |
-| 代码质量 | 好（Spec Review 发现 1 个遗漏并修复） | — |
-| 偏差数量 | 2（D-01 流程劣化, D-02 未 TDD） | — |
-| 总耗时 | ~2 小时（含环境搭建） | — |
+| init 生成质量 | 好（14 文件，无需人工调整） | N/A（复用 Claude Code 的 init） |
+| 执行模式 | 多 Agent 派发（init + backend + frontend + fix） | 单次 exec 非交互（codex exec） |
+| Spec Review 首次通过 | FAIL（漏了 board description 主视图显示） | PASS（8/8 全通过） |
+| 修复次数 | 1 次（Fix Agent） | 0 次 |
+| 文件变更 | 15 files, +294/-7 | 15 files, +289/-6 |
+| Commits | 4（init + backend + frontend + fix） | 2（init + feature） |
+| 代码风格 | 匹配现有模式 | 匹配现有模式，略有细节差异（isNotEmptyString, pre-wrap） |
+| Token 消耗 | 未精确统计（多轮 Agent 交互） | 68,071 tokens（被 429 限流中断） |
+| 总耗时 | ~2 小时（含环境搭建） | ~5 分钟（纯执行，不含环境） |
+| 需要人工介入 | 是（Spec Review 发现问题后派 Fix Agent） | 否（一次通过） |
+
+### 细节差异
+
+| 点 | Claude Code | Codex |
+|----|------------|-------|
+| Board description textarea | Semantic UI `<TextArea>` | react-textarea-autosize + Ctrl+Enter 提交 |
+| Board 主视图显示 | 首次遗漏，Fix Agent 补上 | 一次到位 |
+| List model description 位置 | color 之后 | name 之后（color 之前） |
+| List model 额外约束 | 无 | isNotEmptyString: true |
+| Board 主视图样式 | rgba(255,255,255,0.72), 12px | rgba(255,255,255,0.9), 13px, pre-wrap |
+| Redux-ORM default | getDefault: () => null | 无 default（attr() 直接） |
 
 ## 结论
 
 1. **Harness init 对陌生项目有效。** 一次生成即可用，无需大量人工调整。
-2. **独立 Reviewer Agent 是核心价值。** Layer 3 Spec Compliance Review 发现了 Implementer 遗漏的需求点（board description 未在主视图显示），如果没有这一层，feature 就不完整交付了。
-3. **新 session 流程劣化是真实问题。** 已用 Hook 解决（harness-stage-guard.js）。
-4. **低测试覆盖项目需要分级策略。** 不是所有项目都适合强制 TDD，方法论需要给出指导。
+2. **独立 Reviewer Agent 是核心价值。** Layer 3 Spec Compliance Review 发现了 Claude Code Implementer 遗漏的需求点（board description 未在主视图显示），如果没有这一层，feature 就不完整交付了。
+3. **Codex 单次执行质量更高。** 在给定详细 prompt 的情况下，Codex 一次通过 Spec Review（8/8），而 Claude Code 需要一轮修复。但 Claude Code 的多 Agent 模式提供了内建的质量保障（Reviewer 会兜底）。
+4. **Prompt 质量决定产出。** Codex 的 prompt 是在 Claude Code 实验后写的，已经包含了"board description 要在主视图显示"的明确指令——如果没有 Claude Code 实验中 Reviewer 发现的教训，这个 prompt 可能同样遗漏。
+5. **新 session 流程劣化是真实问题。** 已用 Hook 解决（harness-stage-guard.js）。
+6. **低测试覆盖项目需要分级策略。** 不是所有项目都适合强制 TDD，方法论需要给出指导。
+7. **工具互补而非替代。** Claude Code 适合探索性开发（多轮交互、Reviewer 兜底），Codex 适合明确需求的快速执行（单次 prompt、高效率）。Harness 方法论对两者都适用。
