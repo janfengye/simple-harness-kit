@@ -24,12 +24,28 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 
 const STAGE_FILE = '.harness/current-stage.json';
 const STALE_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_STDIN = 1024 * 1024;
 
 const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
+const PLAN_FILE = '.harness/current-plan.md';
+
+// 读操作工具——PLAN 阶段放行
+const READ_TOOLS = ['Read', 'Grep', 'Glob'];
+
+// PLAN 阶段的阻止消息
+const PLAN_BLOCK_MSG = `[Harness Stage Guard] PLAN 阶段禁止执行写操作。
+你必须先产出计划文件再进入执行：
+  1. 用读工具（Read/Grep/Glob）了解现状
+  2. 向用户澄清需求
+  3. 用 Write 创建 .harness/current-plan.md（任务清单 + 验收标准 + done 条件）
+  4. 等用户确认后，更新 current-stage.json 进入下一阶段
+
+当前只允许：Read, Grep, Glob, Write(.harness/current-plan.md), Write(.harness/current-stage.json)
+`;
 
 // 每个阶段的工作要求——通过 stderr 在每次工具调用时注入
 const STAGE_DIRECTIVES = {
@@ -129,7 +145,7 @@ process.stdin.on('end', () => {
     if (!fs.existsSync(STAGE_FILE)) {
       // Bootstrap 口：允许 Write current-stage.json
       const writePath = String(input.tool_input?.file_path || '');
-      if (input.tool_name === 'Write' && writePath.endsWith(STAGE_FILE)) {
+      if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
         process.stderr.write('[Harness Stage Guard] 正在创建阶段声明，放行。\n');
       } else {
         process.stderr.write(REMINDER);
@@ -143,19 +159,44 @@ process.stdin.on('end', () => {
       } else if (!data.stage || !STAGES.includes(data.stage)) {
         // 无效 stage 时也允许 Write current-stage.json（修复 deadlock）
         const writePath = String(input.tool_input?.file_path || '');
-        if (input.tool_name === 'Write' && writePath.endsWith(STAGE_FILE)) {
+        if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
           process.stderr.write('[Harness Stage Guard] 阶段无效，允许重写阶段声明。\n');
         } else {
           process.stderr.write(`[Harness Stage Guard] 无效的阶段值: ${data.stage}。有效值: ${STAGES.join(', ')}, OFF\n`);
           shouldBlock = true;
         }
       } else {
-        // Harness 模式生效中——通过 stderr 注入阶段工作要求
-        process.stderr.write(
-          `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n'
-        );
-        if (STAGE_DIRECTIVES[data.stage]) {
-          process.stderr.write(STAGE_DIRECTIVES[data.stage]);
+        // Harness 模式生效中
+        const toolName = input.tool_name || '';
+        const writePath = String(input.tool_input?.file_path || '');
+
+        // PLAN 阶段：硬约束——只允许读工具 + Write 计划文件/阶段文件
+        if (data.stage === 'PLAN') {
+          const isReadTool = READ_TOOLS.includes(toolName);
+          // 精确匹配：resolve 后比对，防止路径绕过
+          const resolvedWrite = path.resolve(writePath);
+          const isAllowedWrite = toolName === 'Write' &&
+            [PLAN_FILE, STAGE_FILE].some(f => resolvedWrite === path.resolve(f));
+
+          if (isReadTool) {
+            // 读操作放行，注入 directive
+            process.stderr.write(STAGE_DIRECTIVES.PLAN);
+          } else if (isAllowedWrite) {
+            // 写计划文件或阶段声明放行
+            process.stderr.write(`[Harness Stage Guard] PLAN 阶段：允许写入 ${writePath}\n`);
+          } else {
+            // 其他一律阻止
+            process.stderr.write(PLAN_BLOCK_MSG);
+            shouldBlock = true;
+          }
+        } else {
+          // 非 PLAN 阶段：注入阶段工作要求，不阻止
+          process.stderr.write(
+            `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n'
+          );
+          if (STAGE_DIRECTIVES[data.stage]) {
+            process.stderr.write(STAGE_DIRECTIVES[data.stage]);
+          }
         }
 
         // 过期提醒
@@ -169,6 +210,7 @@ process.stdin.on('end', () => {
     }
   } catch (e) {
     process.stderr.write(`[Harness Stage Guard] 无法读取 ${STAGE_FILE}: ${e.message}\n`);
+    shouldBlock = true; // 异常时阻止，不能失败即放行
   }
 
   if (shouldBlock) {

@@ -30,6 +30,27 @@
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
+      },
+      {
+        "matcher": "Grep",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
+      },
+      {
+        "matcher": "Glob",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
