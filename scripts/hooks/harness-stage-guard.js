@@ -3,7 +3,7 @@
 
 /**
  * Harness Stage Guard — 强制新 session 声明 Harness 阶段
- * 触发: PreToolUse:*（建议挂在 Bash, Edit, Write, Agent 上）
+ * 触发: PreToolUse:*（挂在所有工具上：Bash, Edit, Write, Agent, Read, Grep, Glob）
  *
  * 机制:
  * 1. 检查 .harness/current-stage.json 是否存在
@@ -33,14 +33,19 @@ const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
 
 // 每个阶段的工作要求——通过 stderr 在每次工具调用时注入
 const STAGE_DIRECTIVES = {
-  PLAN: `[PLAN 阶段要求]
-1. 明确需求和验收标准
+  PLAN: `[PLAN 阶段 — 停下来，不要执行任何实现操作]
+你当前在 PLAN 阶段。在用户确认计划之前，禁止编写代码、修改文件、运行构建命令。
+只允许：读文件了解现状、与用户对齐需求。
+
+必须完成以下步骤再继续：
+1. 向用户澄清需求和验收标准
 2. 任务拆解——每个任务 ≤15 分钟可独立验证
 3. 定义每个任务的 done 条件
 4. 识别任务间依赖关系
-5. 产出任务清单后暂停，等用户确认再继续
+5. 输出任务清单，然后停下来等用户说"go"或确认
+
 Gate: 每个任务有验收标准 + 粒度≤15min + 单一主要风险 + 依赖已标注
-PLAN 完成前不要进入 EXECUTE。方向错了后面全白做。
+用户没确认之前，不要进入下一阶段。方向错了后面全白做。
 `,
   SETUP: `[SETUP 阶段要求]
 1. 生成项目级 Rules（.claude/rules/）
