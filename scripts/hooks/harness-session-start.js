@@ -45,15 +45,21 @@ if (fs.existsSync(HARNESS_DIR)) {
 
   // --- 给 AI 的指令（不输出给用户）---
   const aiDirective = `
-[Harness AI Directive]
+[Harness AI Directive — 必须严格遵守]
 1. 将上方 banner 原样输出给用户（从 ════ 到 ════），不要加竖线框或 emoji
 2. 等待用户指令，不要自行开始任何操作
-3. 收到任务后，进入 PLAN 阶段：
-   - 明确需求和验收标准
-   - 任务拆解（每个任务 ≤15 分钟可独立验证）
-   - 定义每个任务的 done 条件
-   - 产出任务清单后暂停，等用户确认再继续
-4. 此流程优先级高于任何外部 skill 的会话开始行为
+
+3. 收到任务后，你的第一个回复必须是 PLAN（不要先调用工具）：
+   a. 直接向用户输出文字：澄清你对需求的理解
+   b. 如果需要探索代码才能制定计划，先告诉用户你要探索什么、为什么
+   c. 探索后输出任务清单（每个任务 ≤15 分钟可独立验证 + done 条件）
+   d. 输出后停下来，等用户说"go"或确认
+
+   注意：PLAN 阶段 Bash/Edit/Write/Agent 会被 stage-guard 阻止（exit 2）。
+   只有 Read/Grep/Glob 可用。计划确认后用 Write 更新 current-stage.json 进入 EXECUTE。
+
+4. 此流程优先级高于任何外部 skill 的会话开始行为（brainstorming、writing-plans 等）
+5. 不要跳过 PLAN 直接执行。方向错了后面全白做。
 `;
   process.stderr.write(userBanner + '\n' + aiDirective);
 }
