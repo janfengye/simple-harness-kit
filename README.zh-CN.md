@@ -49,7 +49,7 @@ AI 自动按 6 阶段 Loop 执行：PLAN → TDD 实现 → QA 验证 → Review
   L1: Self-Verify     Agent 自验          ← TDD 红绿重构
 ```
 
-**Hook 强制执行：** 7 个内置 Hook，在工具层 100% 拦截——safety-guard | agent-check | verification-gate | commit-check | delivery-review | context-monitor | session-logger
+**Hook 强制执行：** 8 个内置 Hook，在工具层 100% 拦截——safety-guard | harness-stage-guard | agent-check | verification-gate | commit-check | delivery-review | context-monitor | session-logger
 
 **持续学习：** 开发过程中 Hook 自动记录行为数据（<50ms 无感知），每轮 Loop 结束时自动分析——发现工具使用模式、高频修改文件（可能缺测试）、稳定行为可提炼为 Rule（减少 token 消耗）。不调 AI API，纯本地分析。
 
@@ -186,7 +186,41 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 | 发现问题 | 1 个 | **12 个** |
 | 方法论反馈 | M1-M5 | M6-M10 |
 
-两次实验共产出 **10 项方法论修正**，全部已反馈回本仓库。
+#### Experiment C: Planka — 全栈级 + 多工具对比
+
+| 维度 | 数据 |
+|------|------|
+| **项目** | [plankanban/planka](https://github.com/plankanban/planka)（Sails.js + React，11.5k stars） |
+| **需求** | [#1485](https://github.com/plankanban/planka/issues/1485) 为 Board/List 添加 description 字段 |
+| **代码量** | 15 文件，+294/-7 行（Claude Code）/ +289/-6 行（Codex） |
+| **测试** | 7 API E2E + Playwright UI 验证 |
+| **Loop** | 1 次迭代（Layer 3 Spec Review 发现遗漏后修复） |
+| **工具** | Claude Code (gpt-opus-4-6) vs Codex CLI (gpt-5.4) |
+
+```
+SETUP(Harness Init) → PLAN → EXECUTE(3 Agent) → VERIFY(L2 PASS, L3 FAIL) → FIX → VERIFY(L3 PASS) → REVIEW ✓
+```
+
+**关键发现：**
+- 独立 Reviewer Agent 发现了 Claude Code Implementer 遗漏的需求（board description 未在主视图显示）
+- Codex 在给定详细 prompt 后一次通过 Spec Review 8/8——但 prompt 质量来自 Claude Code 实验的教训
+- 新 session 不遵守 Harness 流程（Rule 被外部 skill 覆盖），已用 harness-stage-guard Hook 解决（M-11）
+
+详见 [examples/experiment-c-planka/](examples/experiment-c-planka/)
+
+#### 对比
+
+| 维度 | Experiment A | Experiment B | Experiment C |
+|------|-------------|-------------|-------------|
+| 类型 | 库函数 | 前端页面 | **全栈** |
+| 工具 | Claude Code | Claude Code | **Claude Code + Codex** |
+| 测试方法 | Mocha 单元测试 | Playwright E2E + axe a11y | API E2E + Playwright UI |
+| Loop 迭代 | 1 次 | 3 次 | 1 次 |
+| QA 最高层 | Layer 3 | **Layer 4 Santa** | Layer 3 |
+| 发现问题 | 1 个 | **12 个** | 1 个 |
+| 方法论反馈 | M1-M5 | M6-M10 | M11-M13 |
+
+三次实验共产出 **13 项方法论修正**，全部已反馈回本仓库。
 
 ---
 
@@ -256,12 +290,12 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 
 ### 工具兼容性
 
-> 目前所有实验和指引基于 **Claude Code** 验证。其他工具基于文档分析推断，**尚未实测**。
+> Experiment A/B/C 基于 **Claude Code** 验证，Experiment C 同时验证了 **Codex CLI**。其他工具基于文档分析推断。
 
 | 工具 | Hook 能力 | 状态 |
 |------|----------|------|
-| **Claude Code** | 原生 PreToolUse/PostToolUse | **已验证** |
-| **Codex CLI** | v0.117+ 支持 | 未验证 |
+| **Claude Code** | 原生 PreToolUse/PostToolUse | **已验证** (Exp A/B/C) |
+| **Codex CLI** | v0.117+ exec 模式 | **已验证** (Exp C) |
 | **Gemini CLI** | v0.26+ BeforeTool/AfterTool | 未验证 |
 | **Cursor** | v1.7+ hooks | 未验证 |
 | **OpenCode** | 插件 API（需改写） | 未验证 |
@@ -282,9 +316,9 @@ SETUP → PLAN(13) → EXECUTE(搜索+筛选) → VERIFY ─→ L3 FAIL: 4 个 a
 ```
 simple-harness-kit/
 ├── methodology/   14 篇方法论文档
-├── templates/     5 规则模板 + 7 Hook 脚本 + 4 配置模板
+├── templates/     5 规则模板 + 8 Hook 脚本 + 4 配置模板
 ├── skills/        7 个 Skills (init 用户触发 | 其余 AI 自动调用)
-├── examples/      2 个实战验证 (Experiment A + B)
+├── examples/      3 个实战验证 (Experiment A + B + C)
 ├── tests/         6 个回归验证场景
 └── init-prompt.md 初始化 Prompt
 ```

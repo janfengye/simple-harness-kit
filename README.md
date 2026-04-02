@@ -38,7 +38,7 @@ The AI automatically follows the 6-Stage Loop: Plan → TDD implementation → Q
 
 - **6-Stage Loop:** Plan → Setup → Execute → Verify → Review → Feedback (loops until quality gates pass)
 - **5-Layer QA Pyramid:** TDD self-verify → Tool checks (build/lint/test) → Spec review (independent reviewer) → Santa Method (dual adversarial) → Human review
-- **7 Hooks:** safety-guard, agent-check, verification-gate, commit-check, delivery-review, context-monitor, session-logger — fire at 100% reliability regardless of context length
+- **8 Hooks:** safety-guard, harness-stage-guard, agent-check, verification-gate, commit-check, delivery-review, context-monitor, session-logger — fire at 100% reliability regardless of context length
 - **Continuous Learning:** Auto-captures tool usage patterns (<50ms, no overhead), analyzes at each REVIEW stage. Pure local analysis, zero API calls. Discovers workflow habits, hot files needing tests, stable patterns to promote to Rules (token savings)
 
 ### Real-World Validation
@@ -47,8 +47,9 @@ The AI automatically follows the 6-Stage Loop: Plan → TDD implementation → Q
 |-----------|---------|------|-------|-------|------------|
 | **A** | [json-2-csv](https://github.com/mrodrig/json-2-csv) (459 stars) | TS library | TDD + 6 unit tests | 1 | Independent reviewer caught interaction bug missed by implementer |
 | **B** | [Fyrre Magazine](https://github.com/asbhogal/Fyrre-Magazine) | Next.js frontend | 14 Playwright E2E + axe a11y | 3 | Santa Method dual reviewers found 8 deep issues (aria-live, React key, unused components...) |
+| **C** | [Planka](https://github.com/plankanban/planka) (11.5k stars) | Full-stack (Sails.js + React) | 7 API E2E + Playwright UI | 1 | Claude Code vs Codex comparison: independent reviewer is the core value; prompt quality determines output |
 
-10 methodology corrections (M1-M10) produced across both experiments, all fed back into this repo.
+13 methodology corrections (M1-M13) produced across all experiments, all fed back into this repo.
 
 **Experiment B — feature delivery:**
 
@@ -64,7 +65,7 @@ The AI automatically follows the 6-Stage Loop: Plan → TDD implementation → Q
 |--------|-----------|
 | ![Empty](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-5-empty-state.png) | ![Mobile](https://github.com/duoglas/simple-harness-kit/releases/download/v0.1.0/demo-6-mobile.png) |
 
-> Details: [examples/experiment-a/](examples/experiment-a/) | [examples/experiment-b/](examples/experiment-b/)
+> Details: [examples/experiment-a/](examples/experiment-a/) | [examples/experiment-b/](examples/experiment-b/) | [examples/experiment-c-planka/](examples/experiment-c-planka/)
 
 ### Selection Rationale
 
@@ -72,12 +73,12 @@ We surveyed three layers: **agent frameworks** (DeerFlow/LangGraph/CrewAI — bu
 
 ### Tool Compatibility
 
-> All experiments verified on **Claude Code**. Other tools analyzed from docs, **not yet tested**.
+> Experiments A/B/C verified on **Claude Code**. Experiment C also verified on **Codex CLI**. Other tools analyzed from docs, not yet tested.
 
 | Tool | Hook Support | Status |
 |------|-------------|--------|
-| **Claude Code** | Native PreToolUse/PostToolUse | **Verified** |
-| **Codex CLI** | v0.117+ | Untested |
+| **Claude Code** | Native PreToolUse/PostToolUse | **Verified** (Exp A/B/C) |
+| **Codex CLI** | v0.117+ exec mode | **Verified** (Exp C) |
 | **Gemini CLI** | v0.26+ BeforeTool/AfterTool | Untested |
 | **Cursor** | v1.7+ hooks | Untested |
 | **OpenCode** | Plugin API (needs rewrite) | Untested |
@@ -98,9 +99,9 @@ We surveyed three layers: **agent frameworks** (DeerFlow/LangGraph/CrewAI — bu
 ```
 simple-harness-kit/
 ├── methodology/   14 methodology docs
-├── templates/     5 rule templates + 7 hook scripts + 4 config templates
+├── templates/     5 rule templates + 8 hook scripts + 4 config templates
 ├── skills/        7 skills (init user-triggered | rest AI-auto)
-├── examples/      2 real-world experiments (A + B)
+├── examples/      3 real-world experiments (A + B + C)
 ├── tests/         6 regression scenarios
 └── init-prompt.md initialization prompt
 ```
