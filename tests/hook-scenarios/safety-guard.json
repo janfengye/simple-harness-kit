@@ -1,0 +1,83 @@
+[
+  {
+    "name": "safety-guard: rm -rf / → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "rm -rf /" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止删除根目录"]
+    }
+  },
+  {
+    "name": "safety-guard: rm -rf ~ → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "rm -rf ~/Documents" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止删除"]
+    }
+  },
+  {
+    "name": "safety-guard: git push --force → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git push --force origin main" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止 force push"]
+    }
+  },
+  {
+    "name": "safety-guard: git reset --hard → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git reset --hard HEAD~1" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止 hard reset"]
+    }
+  },
+  {
+    "name": "safety-guard: --no-verify → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit --no-verify -m 'skip'" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止跳过"]
+    }
+  },
+  {
+    "name": "safety-guard: DROP TABLE → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "psql -c 'DROP TABLE users'" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止直接 DROP"]
+    }
+  },
+  {
+    "name": "safety-guard: chmod 777 → 阻止",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "chmod 777 /tmp/app" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["禁止 chmod 777"]
+    }
+  },
+  {
+    "name": "safety-guard: 正常命令 → 放行",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "safety-guard: git push --force-with-lease → 放行",
+    "hook": "safety-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git push --force-with-lease origin feature" } },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  }
+]

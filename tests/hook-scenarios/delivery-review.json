@@ -1,0 +1,41 @@
+[
+  {
+    "name": "delivery-review: open .pdf → 提醒复盘",
+    "hook": "delivery-review.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "open report.pdf" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["交付前复盘", "流程合规", "QA 达标"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "delivery-review: open .pptx → 提醒复盘",
+    "hook": "delivery-review.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "open slides.pptx" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["交付前复盘"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "delivery-review: 普通命令 → 不提醒",
+    "hook": "delivery-review.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "npm run build" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["交付前复盘"],
+      "stdout": "passthrough"
+    }
+  }
+]

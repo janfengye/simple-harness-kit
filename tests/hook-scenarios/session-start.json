@@ -1,0 +1,68 @@
+[
+  {
+    "name": "session-start: 过期 stage → 重置为 PLAN",
+    "hook": "harness-session-start.js",
+    "stdin": null,
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"old\"}",
+      ".harness/tool-count.json": "{\"count\":99}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["HARNESS MODE ACTIVE", "PLAN"],
+      "files": {
+        ".harness/current-stage.json": { "contains": "PLAN" },
+        ".harness/tool-count.json": { "contains": "\"count\":0" }
+      }
+    }
+  },
+  {
+    "name": "session-start: 活跃 session（非 PLAN，<5min）→ 不重置",
+    "hook": "harness-session-start.js",
+    "stdin": null,
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"active work\"}",
+      ".harness/tool-count.json": "{\"count\":5}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["活跃 session", "跳过重置"],
+      "files": {
+        ".harness/current-stage.json": { "contains": "EXECUTE" },
+        ".harness/tool-count.json": { "contains": "\"count\":5" }
+      }
+    }
+  },
+  {
+    "name": "session-start: 无 stage 文件 → 创建 PLAN",
+    "hook": "harness-session-start.js",
+    "stdin": null,
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["HARNESS MODE ACTIVE"],
+      "files": {
+        ".harness/current-stage.json": { "contains": "PLAN" }
+      }
+    }
+  },
+  {
+    "name": "session-start: PLAN 状态（即使新鲜）→ 重置",
+    "hook": "harness-session-start.js",
+    "stdin": null,
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"waiting\"}",
+      ".harness/tool-count.json": "{\"count\":3}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["HARNESS MODE ACTIVE"],
+      "files": {
+        ".harness/current-stage.json": { "contains": "PLAN" },
+        ".harness/tool-count.json": { "contains": "\"count\":0" }
+      }
+    }
+  }
+]

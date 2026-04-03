@@ -33,6 +33,45 @@ const MAX_STDIN = 1024 * 1024;
 const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
 const PLAN_FILE = '.harness/current-plan.md';
 const TOOL_COUNT_FILE = '.harness/tool-count.json';
+const STAGE_HISTORY_FILE = '.harness/stage-history.jsonl';
+
+// 验证证据文件——至少一个存在才算 VERIFY 做过
+const VERIFY_EVIDENCE = [
+  'docs/verification-report.md',
+  '.harness/last-verification.json',
+  '.harness/verify-evidence.md',
+];
+
+// 阶段切换到 REVIEW 时的 Gate 检查
+const REVIEW_GATE_BLOCK = `[Harness Stage Guard] 切换到 REVIEW 被阻止（C-GATE-01）。
+
+REVIEW Gate 检查未通过。切换到 REVIEW 前必须满足：
+
+1. 流程完整性：必须经过 PLAN → EXECUTE → VERIFY（检查 .harness/stage-history.jsonl）
+2. 验证证据：VERIFY 阶段必须产出验证报告文件（以下至少一个）：
+   - docs/verification-report.md
+   - .harness/last-verification.json
+   - .harness/verify-evidence.md
+
+如果是文档/方法论变更，验证证据可以是：
+  - 真实项目实测记录（不只是文件存在性检查）
+  - Hook 功能测试结果（node tests/run.js 输出）
+
+请先完成 VERIFY 阶段的验证工作，产出证据文件，再切换到 REVIEW。
+`;
+
+// 交付前检查清单（REVIEW 阶段注入）
+const REVIEW_DELIVERY_CHECK = `[Harness Stage Guard] 交付前检查清单（C-GATE-03）：
+
+在向用户交付结果之前，逐项确认：
+  [ ] 流程合规：是否按 PLAN → EXECUTE → VERIFY 执行？
+  [ ] QA 达标：验证报告是否完整？量化证据是否充分？
+  [ ] 真实验证：功能性变更是否在真实场景跑过（不只是 mock）？
+  [ ] 需求完整：所有需求是否全部处理？
+  [ ] 规则升级：过程中新问题是否写入 constraints？
+
+任何一项不满足，不要向用户交付。回到对应阶段补齐。
+`;
 
 // 首次工具调用阻止消息
 const FIRST_CALL_BLOCK = `[Harness Stage Guard] 这是本轮任务的第一次工具调用，已阻止。
@@ -97,13 +136,16 @@ Gate: Layer 2 全部 PASS + Layer 3 verdict = PASS
   REVIEW: `[REVIEW 阶段要求]
 交付前 6 项复盘:
 1. 流程合规：是否按 6 阶段 Loop 执行？
-2. QA 达标：各层 QA 报告是否完整？
-3. 需求完整：所有需求是否全部处理？
-4. 规则升级：过程中新问题是否写入 constraints？
-5. 改进机会：哪些步骤下次可以优化？
-6. 行为学习（自动）：运行 harness-learn 分析 observations
-Gate: 前 5 项全部 ✓ + 第 6 项自动完成
+2. QA 达标：各层 QA 报告是否完整？量化证据是否充分？
+3. 真实验证：功能性变更是否在真实场景跑过（不只是 mock/文件存在性检查）？
+4. 需求完整：所有需求是否全部处理？
+5. 规则升级：过程中新问题是否写入 constraints？
+6. 改进机会：哪些步骤下次可以优化？
+7. 行为学习（自动）：运行 harness-learn 分析 observations
+Gate: 前 6 项全部 ✓ + 第 7 项自动完成
 达标→交付，不达标→进入 FEEDBACK。
+
+[重要] 向用户交付结果之前，必须逐项回答上述检查清单，不能用"看起来不错"代替。
 `,
   FEEDBACK: `[FEEDBACK 阶段要求]
 F1-F5 反馈处理流程:
@@ -155,6 +197,20 @@ process.stdin.on('end', () => {
       const writePath = String(input.tool_input?.file_path || '');
       if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
         process.stderr.write('[Harness Stage Guard] 正在创建阶段声明，放行。\n');
+        // 记录阶段历史
+        try {
+          const content = String(input.tool_input?.content || '');
+          const parsed = JSON.parse(content);
+          if (parsed.stage) {
+            const entry = JSON.stringify({ stage: parsed.stage, t: new Date().toISOString() }) + '\n';
+            let prefix = '';
+            try {
+              const existing = fs.readFileSync(STAGE_HISTORY_FILE, 'utf8');
+              if (existing.length > 0 && !existing.endsWith('\n')) prefix = '\n';
+            } catch {}
+            fs.appendFileSync(STAGE_HISTORY_FILE, prefix + entry);
+          }
+        } catch {}
       } else {
         process.stderr.write(REMINDER);
         shouldBlock = true;
@@ -177,6 +233,61 @@ process.stdin.on('end', () => {
         // Harness 模式生效中
         const toolName = input.tool_name || '';
         const writePath = String(input.tool_input?.file_path || '');
+
+        // ── 阶段切换 Gate 检查 ──
+        // 如果是 Write current-stage.json，检查目标阶段
+        if (toolName === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
+          try {
+            const content = String(input.tool_input?.content || '');
+            const newData = JSON.parse(content);
+
+            // 记录阶段历史（确保前面有换行，防止和上一行粘连）
+            if (newData.stage) {
+              const entry = JSON.stringify({ stage: newData.stage, t: new Date().toISOString() }) + '\n';
+              let prefix = '';
+              try {
+                const existing = fs.readFileSync(STAGE_HISTORY_FILE, 'utf8');
+                if (existing.length > 0 && !existing.endsWith('\n')) prefix = '\n';
+              } catch {}
+              fs.appendFileSync(STAGE_HISTORY_FILE, prefix + entry);
+            }
+
+            // 切换到 REVIEW 时的 Gate 检查
+            if (newData.stage === 'REVIEW') {
+              const gateErrors = [];
+
+              // 检查 1: 流程完整性（stage-history 中必须有 EXECUTE 和 VERIFY）
+              let history = [];
+              try {
+                history = fs.readFileSync(STAGE_HISTORY_FILE, 'utf8')
+                  .split('\n').filter(Boolean)
+                  .map(l => { try { return JSON.parse(l); } catch { return null; } })
+                  .filter(Boolean)
+                  .map(h => h.stage);
+              } catch {}
+              if (!history.includes('EXECUTE')) gateErrors.push('未经过 EXECUTE 阶段');
+              if (!history.includes('VERIFY')) gateErrors.push('未经过 VERIFY 阶段');
+
+              // 检查 2: 验证证据文件
+              const hasEvidence = VERIFY_EVIDENCE.some(p => {
+                try { return fs.statSync(p).isFile(); } catch { return false; }
+              });
+              if (!hasEvidence) gateErrors.push('未找到验证证据文件（' + VERIFY_EVIDENCE.join(' / ') + '）');
+
+              if (gateErrors.length > 0) {
+                process.stderr.write(REVIEW_GATE_BLOCK);
+                process.stderr.write('\n具体问题:\n' + gateErrors.map(e => '  - ' + e).join('\n') + '\n');
+                shouldBlock = true;
+                // 输出后直接退出，不继续后续检查
+                process.exit(2);
+              }
+            }
+          } catch {}
+          // 阶段切换 Write 放行（如果 Gate 检查通过）
+          process.stderr.write(`[Harness Stage Guard] 阶段切换：允许写入 ${writePath}\n`);
+          process.stdout.write(raw);
+          return;
+        }
 
         // 首次工具调用检查：强制 AI 先输出阶段声明
         let toolCount = { count: 999 }; // 默认跳过（文件不存在时不阻止）

@@ -17,22 +17,54 @@ A portable, tool-agnostic **Harness Engineering** methodology + template repo.
 
 ### Quick Start
 
+**Install (once):**
+
+```bash
+# Install all Skills + print usage
+bash ~/path/to/simple-harness-kit/install.sh
+```
+
 **First time (once per project):**
 
-Tell your AI agent:
 ```
 Read ~/path/to/simple-harness-kit/init-prompt.md and the methodology/ directory.
 Initialize Harness for this project.
+
+Requirements:
+1. Must generate ALL mandatory components (4 hooks + 4 rules + settings.json + constraints.md + CLAUDE.md)
+2. Output completeness checklist when done — any MISSING must be fixed
+3. Hooks take effect in next session — remind me to start a new one
 ```
 
-Or install the skill and run `/harness-init`.
+Or run `/harness-init` after installing skills.
 
-**After that — just describe your feature:**
+**Daily development (Harness already set up):**
+
 ```
-Implement drag-and-drop priority reordering with optimistic updates and rollback on failure.
+Follow Harness 6-Stage Loop: PLAN → EXECUTE → VERIFY → REVIEW.
+
+Requirements:
+1. Pause after PLAN for my confirmation before proceeding
+2. VERIFY must have quantitative evidence (test output/check results), not "looks good"
+3. Functional changes must be validated in real scenarios, not just mocks
+4. Answer the delivery checklist before presenting results
+
+Feature: [describe your feature]
 ```
 
-The AI automatically follows the 6-Stage Loop: Plan → TDD implementation → QA verification → Review → commit. **No commands needed** — Rules and Hooks drive the process.
+**Handling feedback:**
+
+```
+[Harness Feedback] Follow F1-F5:
+1. Record verbatim, don't interpret
+2. Classify severity level
+3. Extract general rule (not ad-hoc fix)
+4. Write to constraints.md
+5. Fix per rule
+
+Issue: [describe the issue]
+Expected: [describe expected behavior]
+```
 
 ### Core Mechanisms
 

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "context-monitor: 低于阈值 → 不提醒",
+    "hook": "context-monitor.js",
+    "stdin": {
+      "tool_name": "Edit",
+      "tool_input": { "file_path": "src/main.js", "old_string": "a", "new_string": "b" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Context Monitor"],
+      "stdout": "passthrough"
+    }
+  }
+]

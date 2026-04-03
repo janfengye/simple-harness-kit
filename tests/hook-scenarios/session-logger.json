@@ -1,0 +1,84 @@
+[
+  {
+    "name": "session-logger: Bash 工具 → 写入 session-log + observations",
+    "hook": "session-logger.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "npm test" },
+      "session_id": "test-session-001"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/session-log.md": { "contains": "Bash 执行" },
+        ".harness/observations.jsonl": { "contains": "npm test" }
+      }
+    }
+  },
+  {
+    "name": "session-logger: Agent 工具 → 记录描述和 prompt",
+    "hook": "session-logger.js",
+    "stdin": {
+      "tool_name": "Agent",
+      "tool_input": { "description": "run tests", "prompt": "Execute the test suite" },
+      "session_id": "test-session-002"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/session-log.md": { "contains": "Agent 派发" },
+        ".harness/observations.jsonl": { "contains": "run tests" }
+      }
+    }
+  },
+  {
+    "name": "session-logger: HARNESS_LOG=off → 不写任何文件",
+    "hook": "session-logger.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "echo hi" }
+    },
+    "env": { "HARNESS_LOG": "off" },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/session-log.md": { "exists": false },
+        ".harness/observations.jsonl": { "exists": false }
+      }
+    }
+  },
+  {
+    "name": "session-logger: 无效 JSON stdin → 不崩溃",
+    "hook": "session-logger.js",
+    "stdin": null,
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "session-logger: 脱敏 — api_key 被替换",
+    "hook": "session-logger.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "curl -H api_key=sk-secret123 https://example.com" }
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/observations.jsonl": { "contains": "[REDACTED]" }
+      }
+    }
+  }
+]

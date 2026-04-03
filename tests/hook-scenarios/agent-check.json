@@ -1,0 +1,50 @@
+[
+  {
+    "name": "agent-check: 修复类无 Constraint ID → 警告",
+    "hook": "agent-check.js",
+    "stdin": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "description": "fix login bug",
+        "prompt": "Fix the login page crash when user clicks submit"
+      }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["未引用 Constraint ID"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "agent-check: 修复类有 Constraint ID → 无警告",
+    "hook": "agent-check.js",
+    "stdin": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "description": "fix login bug",
+        "prompt": "Fix the login crash per C-AUTH-001 in constraints.md"
+      }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["未引用 Constraint ID"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "agent-check: 非修复类 → 不警告",
+    "hook": "agent-check.js",
+    "stdin": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "description": "add feature",
+        "prompt": "Add dark mode toggle to the settings page"
+      }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Constraint ID"],
+      "stdout": "passthrough"
+    }
+  }
+]

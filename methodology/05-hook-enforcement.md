@@ -36,7 +36,16 @@ Hook 返回值：
 
 ## 核心 Hook 清单
 
-### 0. Harness Stage Guard（阶段声明强制）
+Hook 分为两级：
+
+| 级别 | 含义 | init 时 |
+|------|------|---------|
+| **必选** | Harness 运行时基础设施，缺少则流程失控或无记录 | 所有项目必须生成，不可以"轻量适配"为由跳过 |
+| **可选** | 按项目特点选配，有明确的适用/不适用场景 | 跳过时必须记录理由 |
+
+> **实战经验（VH-04）：** mind-palace 项目 init 时 AI 以"纯文档项目不需要"为由跳过了 session-logger、stage-guard、session-start。结果新 session 没有阶段强制、没有过程记录。这三个是基础设施，不是功能 Hook。
+
+### 0. Harness Stage Guard（阶段声明强制）[必选]
 
 **触发：** PreToolUse:Bash, PreToolUse:Edit, PreToolUse:Write, PreToolUse:Agent
 **作用：** 强制 Agent 在新 session 中声明当前 Harness 阶段
@@ -51,7 +60,7 @@ Hook 返回值：
 
 > **实战经验（Experiment C 准备阶段）：** 新 session 被外部 brainstorming skill 覆盖，连续多轮问答而不进入 Harness 6 阶段 Loop。CLAUDE.md 中的流程指令完全失效。此 Hook 专门解决这个问题。
 
-### 0.5 Session Logger（全过程记录）
+### 0.5 Session Logger（全过程记录）[必选]
 
 **触发：** PostToolUse:Agent, PostToolUse:Bash, PostToolUse:Edit, PostToolUse:Write
 **作用：** 每次工具调用后自动追加日志到 `.harness/session-log.md`
@@ -60,7 +69,14 @@ Hook 返回值：
 
 > **实战经验（Experiment A）：** session-logger.js 的 PostToolUse Hook 在实验中可能未正确触发（日志全由 AI 主动写入）。**SETUP 阶段必须用实弹测试验证 Hook 生效**——不能只检查文件存在。排查方向：PostToolUse hook 的 stdin 格式是否与 PreToolUse 一致、hook 脚本是否有执行权限。
 
-### 1. Safety Guard（安全防护）
+### 0.9 Session Start（session 初始化）[必选]
+
+**触发：** SessionStart
+**作用：** 新 session 重置阶段为 PLAN、重置工具调用计数器、输出 banner
+
+与 Stage Guard 配合：Session Start 做初始化，Stage Guard 做持续强制。缺少 Session Start，Stage Guard 会基于过期的阶段数据工作。
+
+### 1. Safety Guard（安全防护）[必选]
 
 **触发：** PreToolUse:Bash
 **作用：** 拦截危险命令
@@ -76,7 +92,7 @@ const BLOCKED = [
 ];
 ```
 
-### 2. Role Guard（角色越权拦截）
+### 2. Role Guard（角色越权拦截）[可选 — 有 PM 角色分离时]
 
 **触发：** PreToolUse:Bash
 **作用：** PM 角色不直接执行 pipeline 命令
@@ -89,7 +105,7 @@ const PM_BLOCKED = [
 ];
 ```
 
-### 3. Agent Prompt Check（Agent 派发合规）
+### 3. Agent Prompt Check（Agent 派发合规）[可选 — 使用 Agent tool 时]
 
 **触发：** PreToolUse:Agent
 **作用：** 修复类 Agent 必须引用 Constraint ID
@@ -112,7 +128,7 @@ if (isFix) {
 }
 ```
 
-### 4. Verification Gate（验证门控）
+### 4. Verification Gate（验证门控）[可选 — 有测试框架时]
 
 **触发：** PreToolUse:Bash (git commit)
 **作用：** 提交前确认 QA 已完成
@@ -136,7 +152,7 @@ if (/git\s+commit/.test(cmd)) {
 }
 ```
 
-### 5. Delivery Review（交付前复盘）
+### 5. Delivery Review（交付前复盘）[可选 — 有交付物文件时]
 
 **触发：** PreToolUse:Bash (open/打开交付物)
 **作用：** 在交付用户之前提醒复盘
@@ -154,7 +170,7 @@ if (/open\s+.*\.(pptx|pdf|html|zip|apk|ipa)/.test(cmd)) {
 }
 ```
 
-### 6. Context Budget Monitor（上下文预算监控）
+### 6. Context Budget Monitor（上下文预算监控）[可选 — 长 session 场景]
 
 **触发：** PreToolUse:Edit, PreToolUse:Write
 **作用：** 工具调用计数过多时提醒 compact

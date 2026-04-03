@@ -1,0 +1,256 @@
+[
+  {
+    "name": "stage-guard: 无 stage 文件 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "ls" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["未声明当前 Harness 阶段"]
+    }
+  },
+  {
+    "name": "stage-guard: 无 stage 文件但写 stage 文件 → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["正在创建阶段声明"]
+    }
+  },
+  {
+    "name": "stage-guard: PLAN 阶段首次调用 → 阻止（强制声明）",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":0}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["这是本轮任务的第一次工具调用"]
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + Read → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["PLAN 阶段"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + Grep → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Grep", "tool_input": { "pattern": "foo" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + Bash → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["PLAN 阶段禁止此操作"]
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + Write plan 文件 → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-plan.md" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["允许写入"]
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + Write 任意文件 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": "src/main.js" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["PLAN 阶段禁止此操作"]
+    }
+  },
+  {
+    "name": "stage-guard: OFF → 放行 + 提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "ls" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"OFF\",\"since\":\"2026-04-03T00:00:00Z\",\"reason\":\"测试\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Harness 模式已关闭"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: EXECUTE → 放行 + 注入阶段要求",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["EXECUTE", "TDD"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: 过期 stage → 放行 + 过期提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"old task\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["超过 2 小时"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: 无效 stage 值 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"INVALID\",\"since\":\"2026-04-03T00:00:00Z\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["无效的阶段值"]
+    }
+  },
+  {
+    "name": "stage-guard: 切 REVIEW 无历史无证据 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["切换到 REVIEW 被阻止", "C-GATE-01"]
+    }
+  },
+  {
+    "name": "stage-guard: 切 REVIEW 有历史有证据 → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}",
+      ".harness/stage-history.jsonl": "{\"stage\":\"PLAN\",\"t\":\"2026-04-03T00:00:00Z\"}\n{\"stage\":\"EXECUTE\",\"t\":\"2026-04-03T00:10:00Z\"}\n{\"stage\":\"VERIFY\",\"t\":\"2026-04-03T00:20:00Z\"}\n",
+      ".harness/verify-evidence.md": "# Verification\nAll tests passed."
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["阶段切换"]
+    }
+  },
+  {
+    "name": "stage-guard: 切 REVIEW 有历史但无证据 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}",
+      ".harness/stage-history.jsonl": "{\"stage\":\"PLAN\",\"t\":\"2026-04-03T00:00:00Z\"}\n{\"stage\":\"EXECUTE\",\"t\":\"2026-04-03T00:10:00Z\"}\n{\"stage\":\"VERIFY\",\"t\":\"2026-04-03T00:20:00Z\"}\n"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["切换到 REVIEW 被阻止", "验证证据"]
+    }
+  },
+  {
+    "name": "stage-guard: 切 EXECUTE（非 REVIEW）→ 放行无 Gate",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["阶段切换"]
+    }
+  },
+  {
+    "name": "stage-guard: REVIEW 阶段注入交付检查清单",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "echo done" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["交付前", "真实验证"],
+      "stdout": "passthrough"
+    }
+  }
+]

@@ -15,83 +15,102 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 
 ## 执行流程
 
-### Step 1: 收集项目信息
+### Step 1: 自动扫描项目信息
 
-向用户确认以下信息（如果 CLAUDE.md 或 package.json 中已有则自动提取）：
+从项目文件中自动提取（不要求用户手动提供）：
+- package.json / pyproject.toml / go.mod → 技术栈、构建命令、测试命令
+- 目录结构 → 源码目录
+- 已有 CLAUDE.md → 项目描述
+- 已有 .claude/ → 需要合并而非覆盖
 
-- 项目名称和描述
-- 技术栈（语言/框架）
-- 构建命令、测试命令、lint 命令
-- 源码目录
-- 风险等级（低/中/高）
-- 已有测试框架？已有 CI/CD？
+如果关键信息扫不到，才向用户确认。
 
-### Step 2: 生成配置文件
-
-基于 `templates/` 目录下的模板，生成以下文件：
+### Step 2: 生成必选组件（不可跳过）
 
 ```
 .claude/
 ├── rules/
-│   ├── role-constraints.md
-│   ├── qa-standards.md
-│   ├── feedback-workflow.md
-│   └── agent-dispatch.md
-├── settings.json          # Hooks 配置
+│   ├── role-constraints.md      # 角色约束
+│   ├── qa-standards.md          # QA 量化标准
+│   ├── feedback-workflow.md     # F1-F5 反馈流程
+│   └── harness-entry.md         # 新 session 入口规则
+├── settings.json                # Hooks 配置（至少注册 4 个必选 Hook）
 
 scripts/hooks/
-├── safety-guard.js
-├── agent-check.js
-├── verification-gate.js
-├── delivery-review.js
-└── context-monitor.js
+├── harness-stage-guard.js       # 阶段声明强制（必选）
+├── harness-session-start.js     # session 初始化 + banner（必选）
+├── session-logger.js            # 全过程记录（必选）
+└── safety-guard.js              # 安全防护（必选）
 
 docs/
-└── constraints.md         # 初始约束（空模板）
+└── constraints.md               # 初始约束模板
 
-CLAUDE.md                  # 更新或创建
-AGENTS.md                  # 更新或创建
+CLAUDE.md                        # 项目级指令
+.harness/                        # 运行时目录（自动创建）
 ```
 
-### Step 3: 定制化
+### Step 3: 按需生成可选组件
 
-根据项目信息替换模板中的 `{{变量}}`：
+根据项目特点选配，跳过时记录理由：
+
+| 组件 | 何时生成 |
+|------|---------|
+| agent-check.js | 会派 Agent 做子任务 |
+| verification-gate.js | 有测试框架 |
+| delivery-review.js | 有交付物文件 |
+| commit-check.js | 团队需要统计 AI 辅助占比 |
+| context-monitor.js | 长 session 场景 |
+| harness-learn.js | 想积累行为数据 |
+| agent-dispatch.md | 会用 Agent tool |
+| AGENTS.md | 同时用 Codex/Cursor |
+
+### Step 4: 定制化
+
+根据项目信息替换模板中的变量：
 - 构建/测试/lint 命令
 - 源码目录路径
-- 覆盖率阈值
 - 交付物文件类型
 - 角色约束范围
 
-### Step 4: 验证
+### Step 5: 完整性检查（C-INIT-03，不可跳过）
 
-1. 运行一次 safety-guard 测试：`echo "rm -rf /" | node scripts/hooks/safety-guard.js`
-2. 确认 settings.json 格式正确
-3. 确认 rules 文件存在且内容合理
+输出检查清单，逐项确认必选组件存在：
 
-### Step 5: 报告
-
-输出初始化摘要：
 ```
-Harness Init 完成
-==================
-Rules:       4 个文件 → .claude/rules/
-Hooks:       5 个脚本 → scripts/hooks/
-Constraints: 初始模板 → docs/constraints.md
-Settings:    已配置 → .claude/settings.json
-CLAUDE.md:   已更新
-AGENTS.md:   已创建
+Harness Init 完整性检查
+========================
+必选组件:
+  [OK/MISSING] .claude/settings.json
+  [OK/MISSING] .claude/rules/role-constraints.md
+  [OK/MISSING] .claude/rules/qa-standards.md
+  [OK/MISSING] .claude/rules/feedback-workflow.md
+  [OK/MISSING] .claude/rules/harness-entry.md
+  [OK/MISSING] scripts/hooks/harness-stage-guard.js
+  [OK/MISSING] scripts/hooks/harness-session-start.js
+  [OK/MISSING] scripts/hooks/session-logger.js
+  [OK/MISSING] scripts/hooks/safety-guard.js
+  [OK/MISSING] docs/constraints.md
+  [OK/MISSING] CLAUDE.md
 
-下一步：
-1. 检查生成的文件，按项目需要调整
-2. 测试 Hook 拦截：故意触发一次违规命令
-3. 开始使用 6 阶段 Loop 进行开发
+可选组件（已生成）: [列出]
+可选组件（已跳过）: [列出 + 理由]
+
+settings.json Hook 注册数: N 个
+
+下一步:
+1. 开一个新 session（当前 session 的 Hook 不会生效）
+2. 新 session 中验证 banner 输出
+3. 故意触发一次违规操作，验证 Hook 拦截
 ```
+
+任何必选组件 MISSING 必须修复后再结束。
 
 ## 注意事项
 
 - 不覆盖已有的 CLAUDE.md 或 settings.json，而是合并
 - constraints.md 初始为空模板，随项目迭代逐步填充
 - Hook 脚本需要 Node.js 环境
+- Hook 配置写入后当前 session 不生效，必须新 session
 
 ## Attribution
 

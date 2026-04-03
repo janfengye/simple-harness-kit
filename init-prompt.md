@@ -1,87 +1,119 @@
 # Harness 初始化 Prompt
 
-> 将此文档 + methodology/ 目录一起发给 Claude / Codex，描述你的项目背景，它即可为你生成完整的 Harness 配置。
+> 将此文档 + methodology/ 目录一起发给 Claude / Codex，它即可为你的项目生成完整的 Harness 配置。
 
-## 使用方法
+## 快速开始
 
-复制以下模板，填写你的项目信息，连同本仓库一起发给 AI：
-
-```
-我要为 [项目名] 建立 Harness Engineering 开发体系。
-
-请先读取以下材料：
-- init-prompt.md（本文件）
-- methodology/ 目录下所有文档（00-10）
-
-然后根据我的项目信息，生成完整的 Harness 配置。
-
-## 项目信息
-
-- **项目名称**: [名称]
-- **项目描述**: [一句话描述]
-- **技术栈**: [语言/框架/工具]
-- **当前阶段**: [新建 / 已有代码 / 重构中]
-- **团队规模**: [几人协作]
-- **Pipeline 阶段**: [阶段1] → [阶段2] → ... → [交付]
-- **每阶段产出物**: [阶段1 输出什么]
-- **质量标准**: [可度量的验收指标]
-- **测试框架**: [已有 / 无 / 使用什么]
-- **风险等级**: [低-日常开发 / 中-重要功能 / 高-生产安全]
-
-## AI 工具环境
-
-- **主力工具**: [Claude Code / Codex CLI / 其他]
-- **是否支持 Hook**: [是 / 否]
-- **是否支持 Skill**: [是 / 否]
-- **是否支持独立 Agent**: [是 / 否]
-
-## 需要生成的内容
-
-请按照 methodology/ 中的方法论，为我生成：
-
-1. `.claude/rules/` 下的规则文件
-   - role-constraints.md（角色约束）
-   - qa-standards.md（QA 量化标准）
-   - feedback-workflow.md（反馈处理流程）
-   - agent-dispatch.md（Agent 派发规范）
-
-2. `scripts/hooks/` 下的 Hook 脚本
-   - safety-guard.js（安全防护）
-   - agent-check.js（Agent prompt 合规）
-   - verification-gate.js（验证门控）
-   - delivery-review.js（交付前复盘）
-   - context-monitor.js（上下文预算监控）
-
-3. `.claude/settings.json`（Hooks 配置）
-
-4. `docs/constraints.md`（初始约束系统）
-
-5. `CLAUDE.md`（项目级，精简版指向 rules）
-
-6. `AGENTS.md`（Codex 兼容版本）
-
-所有内容根据我的项目特点定制，不要照搬模板。
-```
-
-## 生成后验证
-
-在新 session 中验证：
-
-1. **Rules 加载**：conversation 开头可见规则
-2. **Hook 拦截**：故意触发一次违规操作，验证被拦截
-3. **Agent 派发**：派一个修复类 Agent，验证是否提示引用 Constraint ID
-4. **QA 流程**：执行一次完整的 Verification Loop，验证报告输出
-5. **交付复盘**：打开交付物，验证是否触发复盘提醒
-
-## 已有项目加装
-
-如果项目已有代码，额外说明：
+告诉 AI：
 
 ```
-补充信息：
-- 已有的测试覆盖率：[百分比]
-- 已有的 CI/CD：[有 / 无，用什么]
-- 已有的代码规范：[有 / 无，在哪个文件]
-- 需要重点约束的目录：[src/, lib/, ...]
-- 已知的质量问题：[列出]
+读取 ~/path/to/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
+为这个项目初始化 Harness。
 ```
+
+AI 会自动扫描项目（package.json、技术栈、目录结构），不需要你手动填写项目信息。
+
+如果有特殊情况需要补充，直接说：
+
+```
+补充：这个项目没有测试框架，重点约束 src/auth/ 目录。
+```
+
+## 生成清单
+
+### 必选（基础设施，所有项目都必须生成，不可跳过）
+
+| 组件 | 文件 | 作用 |
+|------|------|------|
+| 阶段声明强制 | `scripts/hooks/harness-stage-guard.js` | 强制新 session 声明 Harness 阶段，PLAN 阶段禁止写操作 |
+| Session 初始化 | `scripts/hooks/harness-session-start.js` | 新 session 重置阶段、输出 banner |
+| 全过程记录 | `scripts/hooks/session-logger.js` | 自动记录工具调用到 session-log + observations |
+| 安全防护 | `scripts/hooks/safety-guard.js` | 拦截 rm -rf、force push 等危险命令 |
+| Hooks 配置 | `.claude/settings.json` | 注册所有 Hook 到 Claude Code |
+| 项目说明 | `CLAUDE.md` | 项目级指令，指向 rules |
+| 约束系统 | `docs/constraints.md` | 初始约束模板 |
+| 角色约束 | `.claude/rules/role-constraints.md` | Director/Implementer/Reviewer 职责 |
+| QA 标准 | `.claude/rules/qa-standards.md` | 量化验收指标 |
+| 反馈流程 | `.claude/rules/feedback-workflow.md` | F1-F5 反馈处理 |
+| 入口规则 | `.claude/rules/harness-entry.md` | 新 session banner + 等待指令 |
+
+### 可选（按项目需要选配）
+
+| 组件 | 文件 | 何时需要 | 何时跳过 |
+|------|------|---------|---------|
+| Agent 派发规范 | `.claude/rules/agent-dispatch.md` | 会派 Agent 做子任务 | 纯文档项目、不用 Agent |
+| Agent prompt 合规 | `scripts/hooks/agent-check.js` | 有修复类 Agent 需要引用 Constraint ID | 不用 Agent |
+| 验证门控 | `scripts/hooks/verification-gate.js` | 有测试框架，commit 前需要验证 | 无测试框架的早期项目 |
+| 交付前复盘 | `scripts/hooks/delivery-review.js` | 有交付物（pdf/pptx/zip 等） | 纯代码项目 |
+| Co-Authored-By 检查 | `scripts/hooks/commit-check.js` | 团队需要统计 AI 辅助占比 | 个人项目 |
+| 上下文预算监控 | `scripts/hooks/context-monitor.js` | 长 session、复杂任务 | 短任务 |
+| 持续学习 | `scripts/hooks/harness-learn.js` | 想从行为数据中发现模式 | 初期不需要 |
+| Codex 兼容 | `AGENTS.md` | 同时用 Codex/Cursor | 只用 Claude Code |
+
+## 生成后必须验证（C-INIT-03）
+
+init 完成后，输出以下检查清单：
+
+```
+Harness Init 完整性检查
+========================
+必选组件:
+  [OK/MISSING] .claude/settings.json
+  [OK/MISSING] .claude/rules/role-constraints.md
+  [OK/MISSING] .claude/rules/qa-standards.md
+  [OK/MISSING] .claude/rules/feedback-workflow.md
+  [OK/MISSING] .claude/rules/harness-entry.md
+  [OK/MISSING] scripts/hooks/harness-stage-guard.js
+  [OK/MISSING] scripts/hooks/harness-session-start.js
+  [OK/MISSING] scripts/hooks/session-logger.js
+  [OK/MISSING] scripts/hooks/safety-guard.js
+  [OK/MISSING] docs/constraints.md
+  [OK/MISSING] CLAUDE.md
+
+可选组件（已生成）:
+  [列出本次生成的可选组件]
+
+可选组件（已跳过，附理由）:
+  [列出跳过的组件和原因]
+
+settings.json Hook 注册数: N 个
+
+下一步:
+1. 开一个新 session（当前 session 的 Hook 不会生效）
+2. 新 session 中验证 banner 输出
+3. 故意触发一次违规操作，验证 Hook 拦截
+```
+
+任何必选组件 MISSING 都必须修复后再结束 init。
+
+## settings.json 最小配置
+
+settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-session-start.js" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Write", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Agent", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Read", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Grep", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Glob", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node scripts/hooks/safety-guard.js" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Agent", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] },
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] },
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] },
+      { "matcher": "Write", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] }
+    ]
+  }
+}
+```
+
+可选 Hook 在此基础上追加。

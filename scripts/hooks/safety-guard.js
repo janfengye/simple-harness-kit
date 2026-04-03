@@ -23,7 +23,7 @@ process.stdin.on('end', () => {
     // === 根据项目定制：添加或修改拦截规则 ===
     const BLOCKED = [
       { pattern: /rm\s+-rf\s+[\/~]/, msg: '禁止删除根目录或 home 目录' },
-      { pattern: /git\s+push\s+--force\b/, msg: '禁止 force push，使用 --force-with-lease' },
+      { pattern: /git\s+push\s+--force(?!-with-lease)\b/, msg: '禁止 force push，使用 --force-with-lease' },
       { pattern: /git\s+reset\s+--hard/, msg: '禁止 hard reset，请确认后手动执行' },
       { pattern: /--no-verify/, msg: '禁止跳过 git hooks' },
       { pattern: /DROP\s+(TABLE|DATABASE)/i, msg: '禁止直接 DROP，需要人工确认' },

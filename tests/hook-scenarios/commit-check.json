@@ -1,0 +1,40 @@
+[
+  {
+    "name": "commit-check: 缺少 Co-Authored-By → 警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Co-Authored-By"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: 包含 Co-Authored-By → 无警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Claude Code (claude-opus-4-6)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["缺少 Co-Authored-By"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: 非 commit 命令 → 透传",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "npm test" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  }
+]

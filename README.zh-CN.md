@@ -17,22 +17,54 @@
 
 ### 快速开始
 
-**第一次（每个项目只做一次）：**
+**安装（一次性）：**
 
-告诉你的 AI Agent：
+```bash
+# 安装全部 Skills + 查看使用说明
+bash ~/path/to/simple-harness-kit/install.sh
+```
+
+**第一次使用（每个项目做一次）：**
+
 ```
 读取 ~/path/to/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-帮我初始化 Harness。
+为这个项目初始化 Harness。
+
+要求：
+1. 必须生成全部必选组件（4 个 Hook + 4 个 rules + settings.json + constraints.md + CLAUDE.md）
+2. 完成后输出完整性检查清单，任何 MISSING 必须修复
+3. Hook 在下一个 session 才生效，提醒我开新 session
 ```
 
 或安装 Skill 后执行 `/harness-init`。
 
-**之后——直接说需求：**
+**日常开发（已有 Harness）：**
+
 ```
-帮我实现用户可以拖拽调整任务优先级，拖拽结束后自动保存，失败时回滚。
+按 Harness 6 阶段 Loop 执行：PLAN → EXECUTE → VERIFY → REVIEW。
+
+要求：
+1. PLAN 完成后暂停等我确认，确认后再继续
+2. VERIFY 必须有量化证据（测试结果/检查输出），不接受"看起来没问题"
+3. 功能性变更必须在真实场景验证，不能只靠 mock
+4. 交付前逐项回答交付检查清单
+
+需求：[描述你的需求]
 ```
 
-AI 自动按 6 阶段 Loop 执行：PLAN → TDD 实现 → QA 验证 → Review → commit。**不需要任何命令**——Rules 和 Hooks 自动驱动流程。
+**处理反馈：**
+
+```
+[Harness 反馈] 按 F1-F5 流程处理：
+1. 记录原话不解读
+2. 分类问题层级
+3. 提炼通用规则（不是 ad-hoc 修复）
+4. 写入 constraints.md
+5. 按规则修复
+
+问题：[描述问题]
+期望：[描述期望]
+```
 
 ---
 
@@ -63,34 +95,16 @@ AI 自动按 6 阶段 Loop 执行：PLAN → TDD 实现 → QA 验证 → Review
 
 ```
 读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-初始化 Harness，然后实现以下需求：
+先初始化 Harness（必须生成全部必选组件 + 输出检查清单），然后按 6 阶段 Loop 实现以下需求：
 
 为文章列表页添加搜索和分类筛选功能：
 - 搜索框实时过滤文章标题和摘要
 - 分类标签点击筛选，支持搜索+筛选组合使用
 - 无结果时显示空状态
 - 需要 E2E 测试覆盖搜索、筛选、组合场景
+
+要求：PLAN 暂停等我确认，VERIFY 有量化证据，交付前回答检查清单。
 ```
-
-#### 日常开发（已有 Harness）
-
-```
-按 Harness 流程，帮我实现：
-用户可以拖拽调整任务优先级，拖拽结束后自动保存到后端。
-要求：乐观更新，失败时回滚并提示。
-```
-
-用户只提供**做什么**和**业务约束**，技术实现由 AI 决定。
-
-#### 处理反馈
-
-```
-[Harness 反馈]
-问题：搜索中文时结果为空，但文章标题包含搜索词
-期望：中文搜索正常工作
-```
-
-AI 自动执行 F1-F5：记录 → 分类 → 提炼规则 → 写入 constraints → 按规则修复。
 
 #### 给已有项目加装
 
@@ -98,16 +112,18 @@ AI 自动执行 F1-F5：记录 → 分类 → 提炼规则 → 写入 constraint
 读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
 这个项目已有代码，帮我加装 Harness。
 已知问题：auth 模块没有错误处理，API 响应格式不一致。
+
+要求：必须生成全部必选组件，完成后输出检查清单。
 ```
 
-#### 补测试（企业常见痛点）
-
-**用户不写测试——AI 写，用户验收。**
+#### 补测试
 
 ```
-帮我为这个项目建立自动化测试体系。
+按 Harness 6 阶段 Loop，帮我为这个项目建立自动化测试体系。
 目前没有任何自动化测试，全靠人工。
 重点关注 src/auth/ 和 src/api/ 这两个模块。
+
+要求：PLAN 暂停等确认，VERIFY 用真实测试结果验证。
 ```
 
 AI 自动执行：分析模块风险 → 暂停确认优先级 → 搭建测试框架 → 按优先级生成测试（单元→集成→E2E→a11y）→ 报告。发现 bug 记录到 constraints，不自动修（用户决定）。

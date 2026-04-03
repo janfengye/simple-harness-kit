@@ -1,0 +1,67 @@
+[
+  {
+    "name": "verification-gate: git commit 无验证报告 → 阻止",
+    "hook": "verification-gate.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'done'" }
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["未找到验证报告"]
+    }
+  },
+  {
+    "name": "verification-gate: git commit 有验证报告 → 放行",
+    "hook": "verification-gate.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'done'" }
+    },
+    "setup": {
+      "docs/verification-report.md": "# Verification Report\nAll pass"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: git merge 无验证报告 → 阻止",
+    "hook": "verification-gate.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git merge feature-branch" }
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["未找到验证报告"]
+    }
+  },
+  {
+    "name": "verification-gate: HARNESS_SKIP_GATE=1 → 放行但警告",
+    "hook": "verification-gate.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'hotfix'" }
+    },
+    "env": { "HARNESS_SKIP_GATE": "1" },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["门控已被"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: 非 git 命令 → 透传",
+    "hook": "verification-gate.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "npm test" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  }
+]
