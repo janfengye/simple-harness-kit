@@ -1,25 +1,23 @@
 [
   {
-    "name": "verification-gate: git commit 无验证报告 → 阻止",
+    "name": "verification-gate: commit + EXECUTE 阶段 → 阻止",
     "hook": "verification-gate.js",
-    "stdin": {
-      "tool_name": "Bash",
-      "tool_input": { "command": "git commit -m 'done'" }
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'done'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
     },
     "expect": {
       "exitCode": 2,
-      "stderr": ["未找到验证报告"]
+      "stderr": ["不允许 commit", "EXECUTE"]
     }
   },
   {
-    "name": "verification-gate: git commit 有验证报告 → 放行",
+    "name": "verification-gate: commit + VERIFY + 新鲜证据 → 放行",
     "hook": "verification-gate.js",
-    "stdin": {
-      "tool_name": "Bash",
-      "tool_input": { "command": "git commit -m 'done'" }
-    },
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'done'" } },
     "setup": {
-      "docs/verification-report.md": "# Verification Report\nAll pass"
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence\nFRESH"
     },
     "expect": {
       "exitCode": 0,
@@ -27,11 +25,11 @@
     }
   },
   {
-    "name": "verification-gate: git merge 无验证报告 → 阻止",
+    "name": "verification-gate: commit + VERIFY + 无证据 → 阻止",
     "hook": "verification-gate.js",
-    "stdin": {
-      "tool_name": "Bash",
-      "tool_input": { "command": "git merge feature-branch" }
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'done'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
     },
     "expect": {
       "exitCode": 2,
@@ -39,11 +37,61 @@
     }
   },
   {
+    "name": "verification-gate: commit + REVIEW → 放行",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'done'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: commit + FEEDBACK + 证据 → 放行",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'fix per C-GATE-01'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"FEEDBACK\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: push + EXECUTE → 阻止",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git push origin master" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["push 只允许在 REVIEW"]
+    }
+  },
+  {
+    "name": "verification-gate: push + REVIEW → 放行",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git push origin master" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
     "name": "verification-gate: HARNESS_SKIP_GATE=1 → 放行但警告",
     "hook": "verification-gate.js",
-    "stdin": {
-      "tool_name": "Bash",
-      "tool_input": { "command": "git commit -m 'hotfix'" }
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'hotfix'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
     },
     "env": { "HARNESS_SKIP_GATE": "1" },
     "expect": {
@@ -55,13 +103,32 @@
   {
     "name": "verification-gate: 非 git 命令 → 透传",
     "hook": "verification-gate.js",
-    "stdin": {
-      "tool_name": "Bash",
-      "tool_input": { "command": "npm test" }
-    },
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
     "expect": {
       "exitCode": 0,
       "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: 无 stage 文件 → 阻止 commit",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'no stage'" } },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["无法确定当前阶段"]
+    }
+  },
+  {
+    "name": "verification-gate: commit + VERIFY + 过期证据 → 阻止",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'stale'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2099-01-01T00:00:00Z\",\"task\":\"future task\"}",
+      ".harness/verify-evidence.md": "# Old evidence from previous run"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["验证证据早于当前任务"]
     }
   }
 ]
