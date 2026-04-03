@@ -16,15 +16,19 @@
  */
 
 const fs = require('fs');
+const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
+
 const MAX_STDIN = 1024 * 1024;
 
-const STAGE_FILE = '.harness/current-stage.json';
+const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const COMMIT_ALLOWED_STAGES = ['VERIFY', 'REVIEW', 'FEEDBACK'];
 const PUSH_ALLOWED_STAGES = ['REVIEW'];
 const REPORT_PATHS = [
-  'docs/verification-report.md',
-  '.harness/last-verification.json',
-  '.harness/verify-evidence.md',
+  path.join(ROOT, 'docs/verification-report.md'),
+  path.join(ROOT, '.harness/last-verification.json'),
+  path.join(ROOT, '.harness/verify-evidence.md'),
 ];
 
 let raw = '';

@@ -16,10 +16,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
 
-const OBS_FILE = '.harness/observations.jsonl';
-const INSTINCTS_DIR = '.harness/instincts';
-const REPORT_FILE = '.harness/learn-report.md';
+const OBS_FILE = path.join(ROOT, '.harness/observations.jsonl');
+const INSTINCTS_DIR = path.join(ROOT, '.harness/instincts');
+const REPORT_FILE = path.join(ROOT, '.harness/learn-report.md');
 
 // ── 读取 observations ──
 
@@ -146,7 +148,7 @@ function confidenceFromCount(count) {
 
 // ── 晋升 instinct → Rule ──
 
-const RULES_DIR = '.claude/rules';
+const RULES_DIR = path.join(ROOT, '.claude/rules');
 
 function promoteToRule(instinct) {
   if (!fs.existsSync(RULES_DIR)) fs.mkdirSync(RULES_DIR, { recursive: true });
@@ -263,7 +265,7 @@ function generateReport(obs, sequences, pairs, hotFiles, instincts) {
 
 // ── 周期性报告 ──
 
-const PERIODIC_DIR = '.harness/reports';
+const PERIODIC_DIR = path.join(ROOT, '.harness/reports');
 
 function generatePeriodicReport(allObs, periodObs, periodDays, sequences, pairs, hotFiles, instinctsBefore, instinctsAfter) {
   const now = new Date();

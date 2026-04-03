@@ -12,8 +12,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
 
-const HARNESS_DIR = '.harness';
+const HARNESS_DIR = path.join(ROOT, '.harness');
 const STAGE_FILE = path.join(HARNESS_DIR, 'current-stage.json');
 const TOOL_COUNT_FILE = path.join(HARNESS_DIR, 'tool-count.json');
 

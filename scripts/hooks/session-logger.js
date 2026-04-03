@@ -17,9 +17,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
 
-const LOG_FILE = '.harness/session-log.md';
-const OBS_FILE = '.harness/observations.jsonl';
+const LOG_FILE = path.join(ROOT, '.harness/session-log.md');
+const OBS_FILE = path.join(ROOT, '.harness/observations.jsonl');
 const MAX_STDIN = 1024 * 1024;
 const MAX_OBS_SIZE = 10 * 1024 * 1024; // 10MB 归档阈值
 

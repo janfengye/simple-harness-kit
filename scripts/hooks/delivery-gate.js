@@ -15,8 +15,11 @@
  */
 
 const fs = require('fs');
+const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
 
-const STAGE_FILE = '.harness/current-stage.json';
+const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const MAX_STDIN = 1024 * 1024;
 
 // 交付性语言模式——AI 在宣称完成/交付结果
@@ -36,9 +39,9 @@ const SKIP_CHECK_STAGES = ['PLAN', 'OFF'];
 
 // 验证证据文件
 const EVIDENCE_PATHS = [
-  'docs/verification-report.md',
-  '.harness/last-verification.json',
-  '.harness/verify-evidence.md',
+  path.join(ROOT, 'docs/verification-report.md'),
+  path.join(ROOT, '.harness/last-verification.json'),
+  path.join(ROOT, '.harness/verify-evidence.md'),
 ];
 
 let raw = '';

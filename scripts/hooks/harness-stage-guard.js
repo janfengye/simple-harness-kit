@@ -25,21 +25,23 @@
 
 const fs = require('fs');
 const path = require('path');
+const findRoot = require('./find-root');
+const ROOT = findRoot();
 
-const STAGE_FILE = '.harness/current-stage.json';
+const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const STALE_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_STDIN = 1024 * 1024;
 
 const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
-const PLAN_FILE = '.harness/current-plan.md';
-const TOOL_COUNT_FILE = '.harness/tool-count.json';
-const STAGE_HISTORY_FILE = '.harness/stage-history.jsonl';
+const PLAN_FILE = path.join(ROOT, '.harness/current-plan.md');
+const TOOL_COUNT_FILE = path.join(ROOT, '.harness/tool-count.json');
+const STAGE_HISTORY_FILE = path.join(ROOT, '.harness/stage-history.jsonl');
 
 // 验证证据文件——至少一个存在才算 VERIFY 做过
 const VERIFY_EVIDENCE = [
-  'docs/verification-report.md',
-  '.harness/last-verification.json',
-  '.harness/verify-evidence.md',
+  path.join(ROOT, 'docs/verification-report.md'),
+  path.join(ROOT, '.harness/last-verification.json'),
+  path.join(ROOT, '.harness/verify-evidence.md'),
 ];
 
 // 阶段切换到 REVIEW 时的 Gate 检查
