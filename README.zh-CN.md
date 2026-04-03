@@ -34,13 +34,8 @@ bash ~/simple-harness-kit/install.sh
 读取 ~/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
 为这个项目初始化 Harness。
 
-项目信息：
-- 这是一个 [语言/框架] 项目
-- [有/没有]测试框架
-- [简要描述项目用途]
-
 必须执行的步骤：
-1. 自动扫描项目结构（package.json/目录/已有配置），不要问我要信息
+1. 自动扫描项目结构（package.json/目录/已有配置），自动识别技术栈，不要问我要信息
 2. 生成全部必选组件（init-prompt.md 里标注了哪些是必选）：
    - 4 个 Hook 脚本: harness-stage-guard.js, harness-session-start.js, session-logger.js, safety-guard.js
    - 4 个 Rules: role-constraints.md, qa-standards.md, feedback-workflow.md, harness-entry.md
@@ -59,33 +54,27 @@ bash ~/simple-harness-kit/install.sh
 
 **Step 3: 日常使用**
 
-开新 session 后，Harness 自动接管。直接说需求即可：
+开新 session 后，Harness 自动接管（Hook 驱动 6 阶段 Loop）。两种方式：
 
+方式 A — Skill（推荐，交互式引导）：
 ```
-按 Harness 6 阶段 Loop 执行。
+/harness-start
+```
+Skill 会询问你的需求，自动带上全部约束（PLAN 暂停、VERIFY 量化证据、交付检查清单）。
 
-要求：
-1. PLAN 完成后暂停等我确认再继续
-2. VERIFY 必须有量化证据（测试结果/命令输出），不接受"看起来没问题"
-3. 功能性变更必须在真实场景验证，不能只靠 mock
-4. 交付前逐项回答检查清单（流程合规/QA 达标/真实验证/需求完整/规则升级）
-
-需求：[你的需求]
+方式 B — 手动输入：
+```
+按 Harness 6 阶段 Loop 执行。PLAN 暂停等我确认，VERIFY 要有量化证据，交付前回答检查清单。
+需求：帮我实现 XXX
 ```
 
 **处理反馈：**
 
 ```
-[Harness 反馈] 按 F1-F5 流程处理：
-1. 原样记录问题，不解读
-2. 分类层级（规则层/工具层/配置层/实例层）
-3. 提炼通用规则——"所有 X 类必须满足 Y"，不是 ad-hoc 修
-4. 写入 constraints.md（带 C-{area}-{number} 编号）
-5. 派 Agent 按规则修复（引用 Constraint ID）
-
-问题：[描述问题]
-期望：[描述期望]
+/harness-feedback
 ```
+
+Skill 会询问问题描述和期望行为，自动按 F1-F5 流程执行。也可以手动输入 `[Harness 反馈] 问题：XXX 期望：YYY`。
 
 ---
 

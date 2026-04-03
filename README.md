@@ -34,13 +34,8 @@ Enter your project directory, start Claude Code, and paste:
 Read ~/simple-harness-kit/init-prompt.md and the methodology/ directory.
 Initialize Harness for this project.
 
-Project info:
-- This is a [language/framework] project
-- [Has/doesn't have] test framework
-- [Brief description of project purpose]
-
 Required steps:
-1. Auto-scan project structure (package.json/directories/existing config) — don't ask me for info
+1. Auto-scan project structure (package.json/directories/existing config), detect tech stack automatically — don't ask me for info
 2. Generate ALL mandatory components (marked in init-prompt.md):
    - 4 hook scripts: harness-stage-guard.js, harness-session-start.js, session-logger.js, safety-guard.js
    - 4 rules: role-constraints.md, qa-standards.md, feedback-workflow.md, harness-entry.md
@@ -59,33 +54,27 @@ Or run `/harness-init` (requires Step 1 first).
 
 **Step 3: Daily usage**
 
-After starting a new session, Harness takes over automatically. Just describe your feature:
+After starting a new session, Harness takes over automatically (hooks drive the 6-Stage Loop). Two options:
 
+Option A — Skill (recommended, interactive):
 ```
-Follow Harness 6-Stage Loop.
+/harness-start
+```
+The skill asks for your feature description and automatically includes all constraints (PLAN pause, VERIFY evidence, delivery checklist).
 
-Requirements:
-1. Pause after PLAN for my confirmation before proceeding
-2. VERIFY must have quantitative evidence (test output/check results), not "looks good"
-3. Functional changes must be validated in real scenarios, not just mocks
-4. Answer delivery checklist before presenting results (process compliance/QA/real verification/completeness/rule updates)
-
-Feature: [your feature description]
+Option B — Manual:
+```
+Follow Harness 6-Stage Loop. PLAN pause for my confirmation, VERIFY needs quantitative evidence, answer delivery checklist before presenting results.
+Feature: implement XXX
 ```
 
 **Handling feedback:**
 
 ```
-[Harness Feedback] Follow F1-F5:
-1. Record verbatim, don't interpret
-2. Classify level (rule/tool/config/instance)
-3. Extract general rule — "all X must satisfy Y", not ad-hoc fix
-4. Write to constraints.md (with C-{area}-{number} ID)
-5. Dispatch Agent to fix per rule (reference Constraint ID)
-
-Issue: [describe the issue]
-Expected: [describe expected behavior]
+/harness-feedback
 ```
+
+The skill asks for the issue and expected behavior, then runs F1-F5 automatically. Or manually: `[Harness Feedback] Issue: XXX Expected: YYY`.
 
 ### Core Mechanisms
 

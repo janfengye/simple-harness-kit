@@ -94,6 +94,15 @@ PLAN 阶段只允许：Read, Grep, Glob, Write(.harness/current-plan.md), Write(
 流程：澄清需求 → 任务拆解 → 等用户确认 → Write current-stage.json 切换到 EXECUTE
 `;
 
+// session-log 提醒——附加在每个阶段 directive 后面
+const LOG_REMINDER = `
+[Session Log] 必须记录到 .harness/session-log.md（先记录，再行动）：
+  - 人的指示（原话）
+  - AI 决策（做了什么 + 为什么 + 依据哪篇方法论）
+  - 偏差记录（最重要）：方法论要求 X，实际做了 Y，原因是什么，建议改什么
+  工具调用由 Hook 自动记录，但决策和偏差必须你主动写。偏差是方法论改进的最重要输入。
+`;
+
 // 每个阶段的工作要求——通过 stderr 在每次工具调用时注入
 const STAGE_DIRECTIVES = {
   PLAN: `[PLAN 阶段 — 停下来，不要执行任何实现操作]
@@ -308,6 +317,7 @@ process.stdin.on('end', () => {
           if (isReadTool) {
             // 读操作放行，注入 directive
             process.stderr.write(STAGE_DIRECTIVES.PLAN);
+            process.stderr.write(LOG_REMINDER);
           } else if (isAllowedWrite) {
             // 写计划文件或阶段声明放行
             process.stderr.write(`[Harness Stage Guard] PLAN 阶段：允许写入 ${writePath}\n`);
@@ -323,6 +333,7 @@ process.stdin.on('end', () => {
           );
           if (STAGE_DIRECTIVES[data.stage]) {
             process.stderr.write(STAGE_DIRECTIVES[data.stage]);
+            process.stderr.write(LOG_REMINDER);
           }
         }
 
