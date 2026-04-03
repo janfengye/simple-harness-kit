@@ -1,5 +1,5 @@
 ---
-name: harness-learn
+name: auto-harness-learn
 description: 分析 session 观察数据，提取行为模式生成 instinct，给出改进建议和 Token 优化提议。Use when user says "分析学习数据"、"看看有什么模式"、"harness learn"。
 ---
 

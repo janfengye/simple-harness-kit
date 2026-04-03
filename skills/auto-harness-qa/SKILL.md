@@ -1,5 +1,5 @@
 ---
-name: harness-qa
+name: auto-harness-qa
 description: 执行 5 层 QA 金字塔检查，生成量化验证报告。Use when completing a feature, before committing, or before creating a PR.
 ---
 

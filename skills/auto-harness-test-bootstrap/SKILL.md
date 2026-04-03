@@ -1,5 +1,5 @@
 ---
-name: harness-test-bootstrap
+name: auto-harness-test-bootstrap
 description: 为缺少测试的已有项目渐进式补充多层自动化测试覆盖。Use when project has low or no test coverage and needs automated test generation.
 ---
 

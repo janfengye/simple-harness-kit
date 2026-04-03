@@ -1,5 +1,5 @@
 ---
-name: harness-santa
+name: auto-harness-santa
 description: 执行 Santa Method 双独立对抗验证。Use when reviewing high-risk changes, production deployments, or complex logic before shipping.
 ---
 

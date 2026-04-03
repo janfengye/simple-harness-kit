@@ -1,5 +1,5 @@
 ---
-name: harness-review
+name: auto-harness-review
 description: 执行交付前 5 项复盘检查，确保流程合规和质量达标。Use when about to deliver work to users, before final handoff, or when completing a development cycle.
 ---
 

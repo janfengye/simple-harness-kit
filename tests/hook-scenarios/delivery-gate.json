@@ -1,0 +1,122 @@
+[
+  {
+    "name": "delivery-gate: EXECUTE 阶段 + 交付语言 → 阻止",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "已完成，请查看结果。所有文件已更新。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["未完成 VERIFY"]
+    }
+  },
+  {
+    "name": "delivery-gate: VERIFY 阶段 + 交付语言 + 无证据 → 阻止",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "验证完成，交付给你。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["缺少验证证据"]
+    }
+  },
+  {
+    "name": "delivery-gate: REVIEW 阶段 → 放行",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "全部完成，已推送。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "delivery-gate: OFF → 放行",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "做好了。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"OFF\",\"since\":\"2026-04-03T00:00:00Z\"}"
+    },
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "delivery-gate: EXECUTE + 非交付语言（普通问答）→ 放行",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "好的，我理解你的需求。接下来我会先读取相关文件。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "delivery-gate: PLAN 阶段 → 放行（PLAN 输出计划给用户是正常的）",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "以上是任务计划，请确认。",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "delivery-gate: 无 stage 文件 → 放行（不阻止无 Harness 的项目）",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "完成了。",
+      "stop_reason": "end_turn"
+    },
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "delivery-gate: EXECUTE + VERIFICATION REPORT 关键词 → 阻止（宣称验证但在 EXECUTE）",
+    "hook": "delivery-gate.js",
+    "stdin": {
+      "hook_event_name": "Stop",
+      "last_assistant_message": "VERIFICATION REPORT\n=====\nBuild: PASS\nOverall: READY",
+      "stop_reason": "end_turn"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["未完成 VERIFY"]
+    }
+  }
+]
