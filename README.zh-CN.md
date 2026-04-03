@@ -17,50 +17,71 @@
 
 ### 快速开始
 
-**安装（一次性）：**
+**Step 1: 安装 Skills（一条命令）**
 
 ```bash
-# 安装全部 Skills + 查看使用说明
-bash ~/path/to/simple-harness-kit/install.sh
+git clone https://github.com/duoglas/simple-harness-kit.git ~/simple-harness-kit
+bash ~/simple-harness-kit/install.sh
 ```
 
-**第一次使用（每个项目做一次）：**
+已有本地仓库的：`bash ~/simple-harness-kit/install.sh`
+
+**Step 2: 为项目初始化 Harness（每个项目做一次）**
+
+进入你的项目目录，启动 Claude Code，输入以下内容：
 
 ```
-读取 ~/path/to/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
+读取 ~/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
 为这个项目初始化 Harness。
 
-要求：
-1. 必须生成全部必选组件（4 个 Hook + 4 个 rules + settings.json + constraints.md + CLAUDE.md）
-2. 完成后输出完整性检查清单，任何 MISSING 必须修复
-3. Hook 在下一个 session 才生效，提醒我开新 session
+项目信息：
+- 这是一个 [语言/框架] 项目
+- [有/没有]测试框架
+- [简要描述项目用途]
+
+必须执行的步骤：
+1. 自动扫描项目结构（package.json/目录/已有配置），不要问我要信息
+2. 生成全部必选组件（init-prompt.md 里标注了哪些是必选）：
+   - 4 个 Hook 脚本: harness-stage-guard.js, harness-session-start.js, session-logger.js, safety-guard.js
+   - 4 个 Rules: role-constraints.md, qa-standards.md, feedback-workflow.md, harness-entry.md
+   - settings.json（按 init-prompt.md 中的最小配置，注册全部必选 Hook）
+   - docs/constraints.md, CLAUDE.md
+3. 根据项目特点选配可选组件（跳过的必须说明理由）
+4. 所有 Hook 脚本从 ~/simple-harness-kit/scripts/hooks/ 复制，不要从头写
+5. 完成后输出完整性检查清单（逐项列出每个必选组件的 OK/MISSING 状态）
+6. 任何 MISSING 必须当场修复
+7. 提醒我：Hook 在下一个 session 才生效，需要开新 session
 ```
 
-或安装 Skill 后执行 `/harness-init`。
+或者直接运行 `/harness-init`（需要先完成 Step 1 安装 Skills）。
 
-**日常开发（已有 Harness）：**
+> **重要：** init 完成后必须开新 session。Hook 在当前 session 不生效。
+
+**Step 3: 日常使用**
+
+开新 session 后，Harness 自动接管。直接说需求即可：
 
 ```
-按 Harness 6 阶段 Loop 执行：PLAN → EXECUTE → VERIFY → REVIEW。
+按 Harness 6 阶段 Loop 执行。
 
 要求：
-1. PLAN 完成后暂停等我确认，确认后再继续
-2. VERIFY 必须有量化证据（测试结果/检查输出），不接受"看起来没问题"
+1. PLAN 完成后暂停等我确认再继续
+2. VERIFY 必须有量化证据（测试结果/命令输出），不接受"看起来没问题"
 3. 功能性变更必须在真实场景验证，不能只靠 mock
-4. 交付前逐项回答交付检查清单
+4. 交付前逐项回答检查清单（流程合规/QA 达标/真实验证/需求完整/规则升级）
 
-需求：[描述你的需求]
+需求：[你的需求]
 ```
 
 **处理反馈：**
 
 ```
 [Harness 反馈] 按 F1-F5 流程处理：
-1. 记录原话不解读
-2. 分类问题层级
-3. 提炼通用规则（不是 ad-hoc 修复）
-4. 写入 constraints.md
-5. 按规则修复
+1. 原样记录问题，不解读
+2. 分类层级（规则层/工具层/配置层/实例层）
+3. 提炼通用规则——"所有 X 类必须满足 Y"，不是 ad-hoc 修
+4. 写入 constraints.md（带 C-{area}-{number} 编号）
+5. 派 Agent 按规则修复（引用 Constraint ID）
 
 问题：[描述问题]
 期望：[描述期望]
@@ -93,37 +114,43 @@ bash ~/path/to/simple-harness-kit/install.sh
 
 #### 初始化 + 开发需求（最常见）
 
-```
-读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
-先初始化 Harness（必须生成全部必选组件 + 输出检查清单），然后按 6 阶段 Loop 实现以下需求：
+先按 Step 2 初始化，开新 session 后：
 
-为文章列表页添加搜索和分类筛选功能：
+```
+按 Harness 6 阶段 Loop 执行。
+
+要求：
+1. PLAN 暂停等我确认
+2. VERIFY 有量化证据
+3. 交付前回答检查清单
+
+需求：为文章列表页添加搜索和分类筛选功能：
 - 搜索框实时过滤文章标题和摘要
 - 分类标签点击筛选，支持搜索+筛选组合使用
 - 无结果时显示空状态
 - 需要 E2E 测试覆盖搜索、筛选、组合场景
-
-要求：PLAN 暂停等我确认，VERIFY 有量化证据，交付前回答检查清单。
 ```
 
 #### 给已有项目加装
 
 ```
-读取 ~/ops/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
+读取 ~/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
 这个项目已有代码，帮我加装 Harness。
 已知问题：auth 模块没有错误处理，API 响应格式不一致。
 
-要求：必须生成全部必选组件，完成后输出检查清单。
+必须执行：按 init-prompt.md 的必选清单生成全部组件，Hook 从 ~/simple-harness-kit/scripts/hooks/ 复制，
+完成后输出完整性检查清单。
 ```
 
 #### 补测试
 
 ```
-按 Harness 6 阶段 Loop，帮我为这个项目建立自动化测试体系。
-目前没有任何自动化测试，全靠人工。
-重点关注 src/auth/ 和 src/api/ 这两个模块。
+按 Harness 6 阶段 Loop 执行。
 
 要求：PLAN 暂停等确认，VERIFY 用真实测试结果验证。
+
+需求：为这个项目建立自动化测试体系。
+目前没有任何自动化测试，全靠人工。重点关注 src/auth/ 和 src/api/。
 ```
 
 AI 自动执行：分析模块风险 → 暂停确认优先级 → 搭建测试框架 → 按优先级生成测试（单元→集成→E2E→a11y）→ 报告。发现 bug 记录到 constraints，不自动修（用户决定）。
