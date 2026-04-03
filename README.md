@@ -24,7 +24,7 @@ git clone https://github.com/duoglas/simple-harness-kit.git ~/simple-harness-kit
 bash ~/simple-harness-kit/install.sh
 ```
 
-Already have the repo locally? Just run `bash ~/simple-harness-kit/install.sh`.
+Update: `git -C ~/simple-harness-kit pull && bash ~/simple-harness-kit/install.sh`
 
 **Step 2: Initialize Harness for your project (once per project)**
 

@@ -24,7 +24,7 @@ git clone https://github.com/duoglas/simple-harness-kit.git ~/simple-harness-kit
 bash ~/simple-harness-kit/install.sh
 ```
 
-已有本地仓库的：`bash ~/simple-harness-kit/install.sh`
+更新：`git -C ~/simple-harness-kit pull && bash ~/simple-harness-kit/install.sh`
 
 **Step 2: 为项目初始化 Harness（每个项目做一次）**
 
