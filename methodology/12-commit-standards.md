@@ -100,4 +100,4 @@ echo "AI 辅助占比: $ai / $total"
 
 通过 Hook 在 commit 前检查：如果当前 session 是 AI 工具，commit message 必须包含 Co-Authored-By。
 
-详见 `templates/hooks/commit-check.js`。
+详见 `scripts/hooks/commit-check.js`。

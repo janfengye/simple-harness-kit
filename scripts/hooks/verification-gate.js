@@ -3,6 +3,7 @@
 
 /**
  * Verification Gate Hook — commit/push 前的阶段和证据检查
+ * @version 0.6.1
  * 触发: PreToolUse:Bash
  *
  * 三重检查:

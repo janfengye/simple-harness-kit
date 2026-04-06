@@ -2,11 +2,13 @@
 
 ## 近期
 
-- [ ] **Hook 检查更新机制** — Hook 生成到用户项目后成为本地副本，模板修 bug 后无法同步。方向：版本号比对、harness-update 命令、或 hook 文件头标注 template 版本。
-- [ ] **Skill 便捷分发** — 当前逐个 `claude skill install <path>` 太麻烦。方向：`npx harness-kit install` 一键安装，或 skill 市场机制。
-- [ ] **低测试覆盖项目 TDD 策略 (M-12)** — 方法论需要对测试基础设施弱的项目给出分级指导
+- [x] ~~**Hook 检查更新机制**~~ — 所有 Hook 添加 @version 注释，update.sh 支持版本比对 + --dry-run (v0.6.1)
+- [x] ~~**Skill 便捷分发**~~ — install.sh 已实现一键安装全部 Skills
+- [ ] **低测试覆盖项目 TDD 策略 (M-12)** — 方向：先用框架帮项目搭建测试基础设施（以 Planka 为实战），再基于实战经验更新方法论
 - [ ] **e2e 环境搭建指南 (M-13)** — init 时检测 docker-compose 等配置，生成快速启动指南
-- [ ] **Release 时同步模板到本项目** — release 流程中自动将 templates/ 下的更新同步到本项目的 scripts/hooks/ 和 .claude/settings.json（dogfooding 保鲜）
+- [x] ~~**Release 时同步模板到本项目**~~ — 已通过删除 templates/hooks/ 解决，scripts/hooks/ 为唯一源 (v0.6.1)
+- [x] ~~**Codex init AGENTS.md 未落盘**~~ — init-prompt.md 补注 codex 必须使用 `--full-auto` 或 `-s workspace-write` (v0.6.1)
+- [x] ~~**E2E 验收 agent 的 CWD 清理**~~ — 工作区 (ths-harness) 的 .claude/settings.json Hook 命令添加 find-root 前置脚本，从任意 CWD 自动定位项目根 (v0.6.1)
 
 ## 持续学习改进（设计文档: docs/design/continuous-learning-improvements.md）
 

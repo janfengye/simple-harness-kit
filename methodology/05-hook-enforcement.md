@@ -222,6 +222,12 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
         ]
       },
       {
+        "matcher": "TaskUpdate",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }

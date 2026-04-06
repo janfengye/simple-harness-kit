@@ -3,7 +3,8 @@
 
 /**
  * Harness Stage Guard — 强制新 session 声明 Harness 阶段
- * 触发: PreToolUse:*（挂在所有工具上：Bash, Edit, Write, Agent, Read, Grep, Glob）
+ * @version 0.6.1
+ * 触发: PreToolUse:*（挂在所有工具上：Bash, Edit, Write, Agent, Read, Grep, Glob, TaskUpdate）
  *
  * 机制:
  * 1. 检查 .harness/current-stage.json 是否存在
@@ -303,7 +304,7 @@ process.stdin.on('end', () => {
         // 首次工具调用检查：强制 AI 先输出阶段声明
         let toolCount = { count: 999 }; // 默认跳过（文件不存在时不阻止）
         try { toolCount = JSON.parse(fs.readFileSync(TOOL_COUNT_FILE, 'utf8')); } catch {}
-        if (toolCount.count === 0) {
+        if (toolCount.count === 0 && toolName !== 'TaskUpdate') {
           // 递增计数器，下次不再阻止
           try { fs.writeFileSync(TOOL_COUNT_FILE, JSON.stringify({ count: 1 }) + '\n'); } catch {}
           process.stderr.write(FIRST_CALL_BLOCK);
@@ -333,6 +334,17 @@ process.stdin.on('end', () => {
           process.stderr.write(
             `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n'
           );
+
+          // TaskUpdate(completed) 在 EXECUTE/VERIFY 阶段提醒确认 VERIFY
+          if (toolName === 'TaskUpdate') {
+            const taskStatus = String(input.tool_input?.status || '');
+            if (taskStatus === 'completed' && ['EXECUTE', 'VERIFY'].includes(data.stage)) {
+              process.stderr.write(
+                `[Harness Stage Guard] 在 ${data.stage} 阶段标记任务完成。确认是否已完成 VERIFY 并产出验证证据？\n`
+              );
+            }
+          }
+
           if (STAGE_DIRECTIVES[data.stage]) {
             process.stderr.write(STAGE_DIRECTIVES[data.stage]);
             process.stderr.write(LOG_REMINDER);

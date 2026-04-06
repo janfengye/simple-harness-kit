@@ -252,5 +252,75 @@
       "stderr": ["交付前", "真实验证"],
       "stdout": "passthrough"
     }
+  },
+  {
+    "name": "stage-guard: EXECUTE + TaskUpdate(completed) → 放行 + 提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["在 EXECUTE 阶段标记任务完成", "VERIFY"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: REVIEW + TaskUpdate(completed) → 放行无提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["在 REVIEW 阶段标记任务完成"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: VERIFY + TaskUpdate(completed) → 放行 + 提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["在 VERIFY 阶段标记任务完成", "VERIFY"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: 首次调用 TaskUpdate → 不被 first-call guard 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "in_progress" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":0}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["第一次工具调用"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: EXECUTE + TaskUpdate(in_progress) → 放行无提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "in_progress" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["标记任务完成"],
+      "stdout": "passthrough"
+    }
   }
 ]

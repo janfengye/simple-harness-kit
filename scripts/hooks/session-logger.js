@@ -3,6 +3,7 @@
 
 /**
  * Session Logger Hook — 记录关键动作 + 结构化观察数据
+ * @version 0.6.1
  * 触发: PostToolUse:*
  *
  * 两个输出:

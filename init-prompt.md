@@ -86,6 +86,14 @@ settings.json Hook 注册数: N 个
 
 任何必选组件 MISSING 都必须修复后再结束 init。
 
+## Codex 用户注意
+
+Codex 执行 init 时必须使用 `--full-auto` 或 `-s workspace-write` 模式，否则文件可能无法正确写入磁盘：
+
+```bash
+codex --full-auto "Read ~/simple-harness-kit/init-prompt.md and methodology/. Initialize Harness for this project."
+```
+
 ## settings.json 最小配置
 
 settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
@@ -101,6 +109,7 @@ settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
       { "matcher": "Edit", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Write", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Agent", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "TaskUpdate", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Read", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Grep", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Glob", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },

@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
-TEMPLATES_HOOKS="$SCRIPT_DIR/templates/hooks"
+HOOKS_SRC="$SCRIPT_DIR/scripts/hooks"
 
 echo ""
 echo "Simple Harness Kit — 更新"
@@ -20,17 +20,23 @@ echo ""
 
 # 解析参数
 PROJECT_DIR=""
+DRY_RUN=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --hooks)
       PROJECT_DIR="$2"
       shift 2
       ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
     --help|-h)
-      echo "用法: bash update.sh [--hooks /path/to/project]"
+      echo "用法: bash update.sh [--hooks /path/to/project] [--dry-run]"
       echo ""
       echo "  不带参数: 只更新 ~/.claude/skills/ 中的 Skills"
       echo "  --hooks <path>: 同时更新目标项目的 Hook 脚本到最新模板版本"
+      echo "  --dry-run: 只输出版本差异清单，不执行更新"
       exit 0
       ;;
     *)
@@ -51,8 +57,12 @@ for dest in "$HOME/.claude/skills" "$(pwd)/.claude/skills"; do
       if [ -f "$skill_dir/SKILL.md" ]; then
         skill_name=$(basename "$skill_dir")
         if [ -d "$dest/$skill_name" ]; then
-          cp -r "$skill_dir" "$dest/$skill_name"
-          echo "  更新: $skill_name"
+          if $DRY_RUN; then
+            echo "  [dry-run] 将更新: $skill_name"
+          else
+            cp -r "$skill_dir" "$dest/$skill_name"
+            echo "  更新: $skill_name"
+          fi
           updated=$((updated + 1))
         fi
       fi
@@ -66,6 +76,14 @@ fi
 
 # ── 2. 更新目标项目的 Hook 脚本 ──
 
+# 提取文件中的 @version 值
+extract_version() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    grep -m1 '@version' "$file" | sed 's/.*@version[[:space:]]*//' | tr -d ' */'
+  fi
+}
+
 if [ -n "$PROJECT_DIR" ]; then
   echo ""
   echo "更新 Hook 脚本: $PROJECT_DIR/scripts/hooks/"
@@ -76,25 +94,82 @@ if [ -n "$PROJECT_DIR" ]; then
     exit 1
   fi
 
-  synced=0
-  for hook in "$TEMPLATES_HOOKS"/*.js; do
+  # 版本比对清单
+  echo ""
+  echo "  版本检测:"
+  needs_update=0
+  up_to_date=0
+  locally_modified=0
+  new_hooks=0
+
+  for hook in "$HOOKS_SRC"/*.js; do
     if [ -f "$hook" ]; then
       name=$(basename "$hook")
       target="$PROJECT_DIR/scripts/hooks/$name"
-      if [ -f "$target" ]; then
-        if ! diff -q "$hook" "$target" &>/dev/null; then
-          cp "$hook" "$target"
-          echo "  更新: $name"
-          synced=$((synced + 1))
+      src_ver=$(extract_version "$hook")
+
+      if [ ! -f "$target" ]; then
+        echo "  新增: $name (目标不存在)"
+        new_hooks=$((new_hooks + 1))
+      else
+        tgt_ver=$(extract_version "$target")
+
+        if [ "$src_ver" = "$tgt_ver" ]; then
+          # 版本号相同，检查内容是否一致
+          if diff -q "$hook" "$target" &>/dev/null; then
+            echo "  已是最新: $name ($src_ver)"
+            up_to_date=$((up_to_date + 1))
+          else
+            echo "  本地已修改: $name (版本 $tgt_ver 匹配但内容不同)"
+            locally_modified=$((locally_modified + 1))
+          fi
+        elif [ -z "$tgt_ver" ]; then
+          echo "  本地已修改: $name (无版本号)"
+          locally_modified=$((locally_modified + 1))
+        else
+          echo "  需要更新: $name ($tgt_ver -> $src_ver)"
+          needs_update=$((needs_update + 1))
         fi
       fi
     fi
   done
 
-  if [ $synced -eq 0 ]; then
-    echo "  所有 Hook 已是最新版。"
+  echo ""
+  echo "  统计: $needs_update 需更新, $locally_modified 本地已修改, $new_hooks 新增, $up_to_date 已最新"
+
+  if $DRY_RUN; then
+    echo ""
+    echo "  --dry-run 模式，未执行更新。"
   else
-    echo "  更新了 $synced 个 Hook。新 session 生效。"
+    # 执行更新
+    synced=0
+    installed=0
+    for hook in "$HOOKS_SRC"/*.js; do
+      if [ -f "$hook" ]; then
+        name=$(basename "$hook")
+        target="$PROJECT_DIR/scripts/hooks/$name"
+        if [ ! -f "$target" ]; then
+          cp "$hook" "$target"
+          echo "  新增安装: $name"
+          installed=$((installed + 1))
+        elif ! diff -q "$hook" "$target" &>/dev/null; then
+          tgt_ver=$(extract_version "$target")
+          src_ver=$(extract_version "$hook")
+          if [ -n "$tgt_ver" ] && [ "$src_ver" = "$tgt_ver" ]; then
+            echo "  [警告] 覆盖本地修改: $name (可用 git diff 查看被覆盖内容)"
+          fi
+          cp "$hook" "$target"
+          echo "  更新: $name"
+          synced=$((synced + 1))
+        fi
+      fi
+    done
+
+    if [ $synced -eq 0 ] && [ $installed -eq 0 ]; then
+      echo "  所有 Hook 已是最新版。"
+    else
+      echo "  更新了 $synced 个, 新增了 $installed 个 Hook。新 session 生效。"
+    fi
   fi
 fi
 

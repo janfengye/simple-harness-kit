@@ -30,6 +30,13 @@
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
+        "matcher": "TaskUpdate",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
+      },
+      {
         "matcher": "Read",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
