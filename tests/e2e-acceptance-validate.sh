@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+# E2E 验收完整性校验脚本
+#
+# 用途: E2E 验收 agent 在跑完 init 后必须运行此脚本，校验生成产物是否完整。
+# 设计哲学: 用可执行守门替代 prompt 口头叮嘱（参考 methodology/05-hook-enforcement.md）。
+#
+# 用法:
+#   cd <被测项目根目录>  # 例: planka 干净分支
+#   bash <kit-path>/tests/e2e-acceptance-validate.sh
+#
+# 退出码:
+#   0 - 全部 PASS
+#   1 - 至少一项 FAIL
+#
+# E2E agent 必须把整段输出贴到验收报告，FAIL 项必须修复后再交付。
+
+set -uo pipefail
+
+PASS=0
+FAIL=0
+ERRORS=()
+
+ok() {
+  echo "  ✓ $1"
+  PASS=$((PASS + 1))
+}
+
+fail() {
+  echo "  ✗ $1"
+  FAIL=$((FAIL + 1))
+  ERRORS+=("$1")
+}
+
+section() {
+  echo ""
+  echo "── $1 ──"
+}
+
+# ── A. 必选文件存在性 ──
+# 与 init-prompt.md 的"必选组件"清单精确对齐（4 个核心 hook + 4 个 rule + settings.json + CLAUDE.md + docs/constraints.md）
+# find-root.js / delivery-gate.js 不在最小集里，归为"如存在则检查"
+section "A. 必选文件存在性"
+
+REQUIRED_FILES=(
+  ".claude/settings.json"
+  ".claude/rules/role-constraints.md"
+  ".claude/rules/qa-standards.md"
+  ".claude/rules/feedback-workflow.md"
+  ".claude/rules/harness-entry.md"
+  "scripts/hooks/harness-stage-guard.js"
+  "scripts/hooks/harness-session-start.js"
+  "scripts/hooks/session-logger.js"
+  "scripts/hooks/safety-guard.js"
+  "docs/constraints.md"
+  "CLAUDE.md"
+)
+
+for f in "${REQUIRED_FILES[@]}"; do
+  if [ -f "$f" ]; then
+    ok "exists: $f"
+  else
+    fail "missing: $f"
+  fi
+done
+
+# ── B. settings.json JSON 格式有效性 ──
+section "B. settings.json JSON 有效性"
+
+if [ -f .claude/settings.json ]; then
+  if node -e 'JSON.parse(require("fs").readFileSync(".claude/settings.json","utf8"))' 2>/dev/null; then
+    ok "settings.json is valid JSON"
+  else
+    fail "settings.json is not valid JSON"
+  fi
+fi
+
+# ── C. settings.json 顶层事件完整性 ──
+# 与 init-prompt.md 的最小配置对齐：4 个必选事件。Stop 不在最小集，归为可选。
+section "C. settings.json 顶层事件完整性（最小集）"
+
+REQUIRED_EVENTS=(SessionStart PreToolUse PostToolUse PostToolUseFailure)
+for ev in "${REQUIRED_EVENTS[@]}"; do
+  if [ -f .claude/settings.json ] && grep -q "\"$ev\":" .claude/settings.json; then
+    ok "event present: $ev"
+  else
+    fail "missing event: $ev"
+  fi
+done
+
+# Stop 属于可选（delivery-gate），存在则补充信息，不存在不算失败
+if [ -f .claude/settings.json ] && grep -q '"Stop":' .claude/settings.json; then
+  echo "  (optional) Stop event present"
+else
+  echo "  (optional) Stop event not present — delivery-gate 未启用"
+fi
+
+# ── D. 必选 PreToolUse matcher 存在性 ──
+section "D. 必选 PreToolUse matcher"
+
+REQUIRED_MATCHERS=(Bash Edit Write Agent Read Grep Glob WebFetch WebSearch TaskUpdate)
+for m in "${REQUIRED_MATCHERS[@]}"; do
+  if [ -f .claude/settings.json ] && grep -q "\"matcher\": \"$m\"" .claude/settings.json; then
+    ok "matcher present: $m"
+  else
+    fail "missing matcher: $m"
+  fi
+done
+
+# ── D2. matcher command 指向正确脚本（反 noop bypass）──
+# 用 JS 解析 settings.json，精确校验每个必选 matcher 的 command 包含对应脚本名
+# 防止 '挂了 matcher 但指向 noop.js' 的伪 PASS
+section "D2. matcher command 指向正确脚本"
+
+if [ -f .claude/settings.json ]; then
+  # 必需的 matcher → 必需的 command 包含的脚本名片段
+  # 格式: "event:matcher:scriptname"
+  # 与 init-prompt.md 最小配置（L97-120）的 settings.json 示例严格对齐
+  REQUIRED_WIRING=(
+    "SessionStart:*:harness-session-start.js"
+    "PreToolUse:Bash:harness-stage-guard.js"
+    "PreToolUse:Edit:harness-stage-guard.js"
+    "PreToolUse:Write:harness-stage-guard.js"
+    "PreToolUse:Agent:harness-stage-guard.js"
+    "PreToolUse:TaskUpdate:harness-stage-guard.js"
+    "PreToolUse:Read:harness-stage-guard.js"
+    "PreToolUse:Grep:harness-stage-guard.js"
+    "PreToolUse:Glob:harness-stage-guard.js"
+    "PreToolUse:WebFetch:harness-stage-guard.js"
+    "PreToolUse:WebSearch:harness-stage-guard.js"
+    "PreToolUse:Bash:safety-guard.js"
+    "PostToolUse:Agent:session-logger.js"
+    "PostToolUse:Bash:session-logger.js"
+    "PostToolUse:Edit:session-logger.js"
+    "PostToolUse:Write:session-logger.js"
+    "PostToolUseFailure:*:session-logger.js"
+  )
+
+  for wiring in "${REQUIRED_WIRING[@]}"; do
+    event=$(echo "$wiring" | cut -d: -f1)
+    matcher=$(echo "$wiring" | cut -d: -f2)
+    script=$(echo "$wiring" | cut -d: -f3)
+
+    result=$(node -e "
+      const s = JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'));
+      const hooks = (s.hooks && s.hooks['$event']) || [];
+      const found = hooks.some(h => {
+        const matchOk = '$matcher' === '*' || h.matcher === '$matcher';
+        if (!matchOk) return false;
+        return (h.hooks || []).some(inner => (inner.command || '').includes('$script'));
+      });
+      process.stdout.write(found ? 'OK' : 'MISSING');
+    " 2>/dev/null)
+
+    if [ "$result" = "OK" ]; then
+      ok "wiring: $event:$matcher → $script"
+    else
+      fail "wiring missing: $event:$matcher → $script"
+    fi
+  done
+fi
+
+# ── E. Hook 脚本语法 ──
+section "E. Hook 脚本语法"
+
+for f in scripts/hooks/*.js; do
+  if [ -f "$f" ]; then
+    if node -c "$f" 2>/dev/null; then
+      ok "syntax OK: $(basename "$f")"
+    else
+      fail "syntax error: $(basename "$f")"
+    fi
+  fi
+done
+
+# ── F. Hook 实弹: stage-guard 拦截 PLAN+Bash ──
+section "F. Hook 实弹测试"
+
+if [ -f scripts/hooks/harness-stage-guard.js ]; then
+  # 准备测试 stage 文件（PLAN 阶段）
+  TMPSTAGE=$(mktemp -d)
+  mkdir -p "$TMPSTAGE/.harness"
+  RECENT_TS=$(date -u -v-1M +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u --date='1 minute ago' +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%S.000Z)
+  echo "{\"stage\":\"PLAN\",\"since\":\"$RECENT_TS\",\"task\":\"e2e-validate\"}" > "$TMPSTAGE/.harness/current-stage.json"
+  echo '{"count":1}' > "$TMPSTAGE/.harness/tool-count.json"
+
+  # PLAN + Bash 应该被阻止 (exit 2)
+  output=$(cd "$TMPSTAGE" && echo '{"tool_name":"Bash","tool_input":{"command":"echo test"}}' | node "$OLDPWD/scripts/hooks/harness-stage-guard.js" 2>&1)
+  code=$?
+  if [ $code -eq 2 ] && echo "$output" | grep -q "PLAN 阶段禁止"; then
+    ok "stage-guard blocks PLAN+Bash (exit 2)"
+  else
+    fail "stage-guard did NOT block PLAN+Bash (exit $code)"
+  fi
+
+  # PLAN + Read 应该放行 (exit 0)
+  output=$(cd "$TMPSTAGE" && echo '{"tool_name":"Read","tool_input":{"file_path":"foo"}}' | node "$OLDPWD/scripts/hooks/harness-stage-guard.js" 2>&1)
+  code=$?
+  if [ $code -eq 0 ]; then
+    ok "stage-guard allows PLAN+Read (exit 0)"
+  else
+    fail "stage-guard wrongly blocked PLAN+Read (exit $code)"
+  fi
+
+  rm -rf "$TMPSTAGE"
+fi
+
+# ── G. session-logger 写入测试 ──
+section "G. session-logger 写入测试"
+
+if [ -f scripts/hooks/session-logger.js ]; then
+  TMPLOG=$(mktemp -d)
+  mkdir -p "$TMPLOG/.harness"
+  output=$(cd "$TMPLOG" && echo '{"tool_name":"Bash","tool_input":{"command":"e2e-validate-marker"}}' | node "$OLDPWD/scripts/hooks/session-logger.js" 2>&1)
+  if [ -f "$TMPLOG/.harness/session-log.md" ] && grep -q "e2e-validate-marker" "$TMPLOG/.harness/session-log.md"; then
+    ok "session-logger writes to .harness/session-log.md"
+  else
+    fail "session-logger did NOT write session-log.md"
+  fi
+  rm -rf "$TMPLOG"
+fi
+
+# ── H. CLAUDE.md 项目定制 (非空且非纯模板) ──
+section "H. CLAUDE.md 项目定制度"
+
+if [ -f CLAUDE.md ]; then
+  size=$(wc -c < CLAUDE.md | tr -d ' ')
+  if [ "$size" -gt 200 ]; then
+    ok "CLAUDE.md size > 200 bytes ($size)"
+  else
+    fail "CLAUDE.md too small ($size bytes), might be unfilled template"
+  fi
+fi
+
+# ── 汇总 ──
+section "汇总"
+
+TOTAL=$((PASS + FAIL))
+echo ""
+echo "  PASS: $PASS / $TOTAL"
+echo "  FAIL: $FAIL / $TOTAL"
+
+if [ $FAIL -gt 0 ]; then
+  echo ""
+  echo "失败项:"
+  for e in "${ERRORS[@]}"; do
+    echo "  - $e"
+  done
+  echo ""
+  echo "E2E 验收 NOT READY。修复以上问题后重新运行。"
+  exit 1
+fi
+
+echo ""
+echo "E2E 验收基线检查通过 ✓"
+echo "注意：本脚本只覆盖静态 + 基础实弹检查。完整验收还需执行实际开发任务并跑全流程。"
+exit 0
