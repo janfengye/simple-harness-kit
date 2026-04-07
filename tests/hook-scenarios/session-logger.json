@@ -4,7 +4,9 @@
     "hook": "session-logger.js",
     "stdin": {
       "tool_name": "Bash",
-      "tool_input": { "command": "npm test" },
+      "tool_input": {
+        "command": "npm test"
+      },
       "session_id": "test-session-001"
     },
     "setup": {
@@ -14,8 +16,12 @@
       "exitCode": 0,
       "stdout": "passthrough",
       "files": {
-        ".harness/session-log.md": { "contains": "Bash 执行" },
-        ".harness/observations.jsonl": { "contains": "npm test" }
+        ".harness/session-log.md": {
+          "contains": "Bash 执行"
+        },
+        ".harness/observations.jsonl": {
+          "contains": "npm test"
+        }
       }
     }
   },
@@ -25,7 +31,9 @@
     "stdin": {
       "hook_event_name": "PostToolUse",
       "tool_name": "Bash",
-      "tool_input": { "command": "ls -la" },
+      "tool_input": {
+        "command": "ls -la"
+      },
       "session_id": "test-session-success"
     },
     "setup": {
@@ -35,7 +43,9 @@
       "exitCode": 0,
       "stdout": "passthrough",
       "files": {
-        ".harness/observations.jsonl": { "contains": "\"status\":\"success\"" }
+        ".harness/observations.jsonl": {
+          "contains": "\"status\":\"success\""
+        }
       }
     }
   },
@@ -44,7 +54,10 @@
     "hook": "session-logger.js",
     "stdin": {
       "tool_name": "Agent",
-      "tool_input": { "description": "run tests", "prompt": "Execute the test suite" },
+      "tool_input": {
+        "description": "run tests",
+        "prompt": "Execute the test suite"
+      },
       "session_id": "test-session-002"
     },
     "setup": {
@@ -54,8 +67,12 @@
       "exitCode": 0,
       "stdout": "passthrough",
       "files": {
-        ".harness/session-log.md": { "contains": "Agent 派发" },
-        ".harness/observations.jsonl": { "contains": "run tests" }
+        ".harness/session-log.md": {
+          "contains": "Agent 派发"
+        },
+        ".harness/observations.jsonl": {
+          "contains": "run tests"
+        }
       }
     }
   },
@@ -64,15 +81,23 @@
     "hook": "session-logger.js",
     "stdin": {
       "tool_name": "Bash",
-      "tool_input": { "command": "echo hi" }
+      "tool_input": {
+        "command": "echo hi"
+      }
     },
-    "env": { "HARNESS_LOG": "off" },
+    "env": {
+      "HARNESS_LOG": "off"
+    },
     "expect": {
       "exitCode": 0,
       "stdout": "passthrough",
       "files": {
-        ".harness/session-log.md": { "exists": false },
-        ".harness/observations.jsonl": { "exists": false }
+        ".harness/session-log.md": {
+          "exists": false
+        },
+        ".harness/observations.jsonl": {
+          "exists": false
+        }
       }
     }
   },
@@ -106,8 +131,21 @@
       "exitCode": 0,
       "stdout": "passthrough",
       "files": {
-        ".harness/session-log.md": { "contains": "[失败]" },
-        ".harness/observations.jsonl": { "contains": "\"status\":\"failure\"" }
+        ".harness/session-log.md": {
+          "contains": [
+            "[失败] Bash 执行",
+            "npm test",
+            "**错误**:",
+            "Command exited with non-zero status code 1"
+          ]
+        },
+        ".harness/observations.jsonl": {
+          "contains": [
+            "\"status\":\"failure\"",
+            "\"error\":",
+            "Command exited with non-zero status code 1"
+          ]
+        }
       }
     }
   },
@@ -116,7 +154,9 @@
     "hook": "session-logger.js",
     "stdin": {
       "tool_name": "Bash",
-      "tool_input": { "command": "curl -H api_key=sk-secret123 https://example.com" }
+      "tool_input": {
+        "command": "curl -H api_key=sk-secret123 https://example.com"
+      }
     },
     "setup": {
       ".harness/.gitkeep": ""
@@ -124,7 +164,9 @@
     "expect": {
       "exitCode": 0,
       "files": {
-        ".harness/observations.jsonl": { "contains": "[REDACTED]" }
+        ".harness/observations.jsonl": {
+          "contains": "[REDACTED]"
+        }
       }
     }
   }

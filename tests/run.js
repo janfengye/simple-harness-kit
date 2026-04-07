@@ -21,7 +21,9 @@
  *     "stderrNot": ["不应出现"],           // stderr 必须不包含
  *     "stdout": "passthrough",             // "passthrough" = stdout 应等于 stdin
  *     "files": {                           // 可选：检查输出文件
- *       ".harness/observations.jsonl": { "contains": "tool" }
+ *       ".harness/observations.jsonl": { "contains": "tool" },
+ *       // contains 可以是 string（单项）或 string[]（多项，全部必须命中）
+ *       ".harness/session-log.md": { "contains": ["关键词 A", "关键词 B"] }
  *     }
  *   }
  * }
@@ -178,10 +180,13 @@ function runScenario(scenario) {
         } else {
           if (!fs.existsSync(fullPath)) {
             errors.push(`文件不存在: ${filePath}`);
-          } else if (check.contains) {
+          } else if (check.contains !== undefined) {
             const content = fs.readFileSync(fullPath, 'utf8');
-            if (!content.includes(check.contains)) {
-              errors.push(`文件 ${filePath} 未包含: "${check.contains}"`);
+            const needles = Array.isArray(check.contains) ? check.contains : [check.contains];
+            for (const needle of needles) {
+              if (!content.includes(needle)) {
+                errors.push(`文件 ${filePath} 未包含: "${needle}"`);
+              }
             }
           }
         }
