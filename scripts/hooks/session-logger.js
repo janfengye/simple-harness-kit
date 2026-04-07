@@ -3,8 +3,12 @@
 
 /**
  * Session Logger Hook — 记录关键动作 + 结构化观察数据
- * @version 0.6.1
- * 触发: PostToolUse:* + PostToolUseFailure（记录成功和失败的工具调用）
+ * @version 0.6.3
+ * 触发:
+ *   - PostToolUse:* (成功工具调用)
+ *   - PostToolUseFailure (失败工具调用)
+ *   - StopFailure (API 错误结束: rate_limit / authentication_failed / billing_error /
+ *     invalid_request / server_error / max_output_tokens / unknown) — v0.6.3 加入
  *
  * 两个输出:
  * 1. .harness/session-log.md — 人可读的 Markdown 日志
@@ -26,6 +30,20 @@ const OBS_FILE = path.join(ROOT, '.harness/observations.jsonl');
 const MAX_STDIN = 1024 * 1024;
 const MAX_OBS_SIZE = 10 * 1024 * 1024; // 10MB 归档阈值
 
+// 归档过大的 observations.jsonl（>= MAX_OBS_SIZE）。两个 append 入口（普通 + StopFailure）
+// 都必须在写入前调用，避免单个入口绕过归档逻辑导致文件无限增长。
+function archiveObservationsIfLarge() {
+  try {
+    const stat = fs.statSync(OBS_FILE);
+    if (stat.size >= MAX_OBS_SIZE) {
+      const dir = path.dirname(OBS_FILE);
+      const archiveDir = path.join(dir, 'observations.archive');
+      if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
+      fs.renameSync(OBS_FILE, path.join(archiveDir, `observations-${Date.now()}.jsonl`));
+    }
+  } catch {}
+}
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => {
@@ -41,9 +59,45 @@ process.stdin.on('end', () => {
 
   try {
     const input = JSON.parse(raw);
-    const tool = input.tool_name || 'unknown';
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+    // ── StopFailure lifecycle event 早处理 ──
+    // API 错误结束（rate_limit / authentication_failed / billing_error / invalid_request /
+    // server_error / max_output_tokens / unknown）。没有 tool_name / tool_input，
+    // 但有 error_type 字段。observability-only。
+    if (input.hook_event_name === 'StopFailure') {
+      const errorType = input.error_type || 'unknown';
+      const dirSf = path.dirname(LOG_FILE);
+      if (!fs.existsSync(dirSf)) fs.mkdirSync(dirSf, { recursive: true });
+
+      const sfEntry = `### [${timeStr}] [API 错误] StopFailure\n- **error_type**: ${errorType}\n- **session**: ${input.session_id || ''}\n`;
+      if (!fs.existsSync(LOG_FILE)) {
+        fs.writeFileSync(LOG_FILE,
+          '# Harness Session Log\n\n## 元信息\n' +
+          `- 开始时间: ${now.toISOString().slice(0, 16)}\n` +
+          '- 工具: Claude Code\n\n---\n\n## 事件记录\n\n');
+      }
+      fs.appendFileSync(LOG_FILE, sfEntry + '\n');
+
+      if (process.env.HARNESS_LEARN !== 'off') {
+        archiveObservationsIfLarge();
+        const sfObs = {
+          t: now.toISOString(),
+          tool: 'StopFailure',
+          input: '',
+          session: input.session_id || '',
+          status: 'api_error',
+          error_type: errorType,
+        };
+        fs.appendFileSync(OBS_FILE, JSON.stringify(sfObs) + '\n');
+      }
+
+      process.stdout.write(raw);
+      return;
+    }
+
+    const tool = input.tool_name || 'unknown';
 
     // 判定成功/失败：PostToolUseFailure 事件或显式 error 字段
     const isFailure = input.hook_event_name === 'PostToolUseFailure' || !!input.error;
@@ -84,15 +138,7 @@ process.stdin.on('end', () => {
 
     // ── 2. 结构化观察数据（供 harness-learn 分析）──
     if (process.env.HARNESS_LEARN !== 'off') {
-      // 归档过大的文件
-      try {
-        const stat = fs.statSync(OBS_FILE);
-        if (stat.size >= MAX_OBS_SIZE) {
-          const archiveDir = path.join(dir, 'observations.archive');
-          if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
-          fs.renameSync(OBS_FILE, path.join(archiveDir, `observations-${Date.now()}.jsonl`));
-        }
-      } catch {}
+      archiveObservationsIfLarge();
 
       // 构造观察记录
       const toolInput = input.tool_input || {};

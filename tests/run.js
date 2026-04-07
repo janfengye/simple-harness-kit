@@ -23,7 +23,11 @@
  *     "files": {                           // 可选：检查输出文件
  *       ".harness/observations.jsonl": { "contains": "tool" },
  *       // contains 可以是 string（单项）或 string[]（多项，全部必须命中）
- *       ".harness/session-log.md": { "contains": ["关键词 A", "关键词 B"] }
+ *       // containsNot 同样支持 string | string[]，要求文件中"不应"出现这些字符串
+ *       ".harness/session-log.md": {
+ *         "contains": ["关键词 A", "关键词 B"],
+ *         "containsNot": ["禁词 X"]
+ *       }
  *     }
  *   }
  * }
@@ -187,12 +191,22 @@ function runScenario(scenario) {
         } else {
           if (!fs.existsSync(fullPath)) {
             errors.push(`文件不存在: ${filePath}`);
-          } else if (check.contains !== undefined) {
+          } else {
             const content = fs.readFileSync(fullPath, 'utf8');
-            const needles = Array.isArray(check.contains) ? check.contains : [check.contains];
-            for (const needle of needles) {
-              if (!content.includes(needle)) {
-                errors.push(`文件 ${filePath} 未包含: "${needle}"`);
+            if (check.contains !== undefined) {
+              const needles = Array.isArray(check.contains) ? check.contains : [check.contains];
+              for (const needle of needles) {
+                if (!content.includes(needle)) {
+                  errors.push(`文件 ${filePath} 未包含: "${needle}"`);
+                }
+              }
+            }
+            if (check.containsNot !== undefined) {
+              const forbidden = Array.isArray(check.containsNot) ? check.containsNot : [check.containsNot];
+              for (const f of forbidden) {
+                if (content.includes(f)) {
+                  errors.push(`文件 ${filePath} 不应包含: "${f}"`);
+                }
               }
             }
           }

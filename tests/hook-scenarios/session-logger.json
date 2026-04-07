@@ -169,5 +169,112 @@
         }
       }
     }
+  },
+  {
+    "name": "session-logger: StopFailure (rate_limit) → 写入 API 错误标记，不走旧路径",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "StopFailure",
+      "error_type": "rate_limit",
+      "session_id": "sess-rl-001"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/session-log.md": {
+          "contains": [
+            "[API 错误] StopFailure",
+            "rate_limit",
+            "sess-rl-001"
+          ],
+          "containsNot": ["Bash 执行", "Agent 派发", "[失败] "]
+        },
+        ".harness/observations.jsonl": {
+          "contains": [
+            "\"tool\":\"StopFailure\"",
+            "\"status\":\"api_error\"",
+            "\"error_type\":\"rate_limit\""
+          ],
+          "containsNot": ["\"status\":\"success\"", "\"status\":\"failure\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "session-logger: StopFailure (server_error) → 写入",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "StopFailure",
+      "error_type": "server_error",
+      "session_id": "sess-srv"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "contains": "server_error" },
+        ".harness/observations.jsonl": { "contains": "\"error_type\":\"server_error\"" }
+      }
+    }
+  },
+  {
+    "name": "session-logger: StopFailure 缺 error_type → fallback unknown",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "StopFailure",
+      "session_id": "sess-no-type"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "contains": "unknown" },
+        ".harness/observations.jsonl": { "contains": "\"error_type\":\"unknown\"" }
+      }
+    }
+  },
+  {
+    "name": "session-logger: StopFailure + HARNESS_LOG=off → 不写文件",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "StopFailure",
+      "error_type": "rate_limit"
+    },
+    "env": { "HARNESS_LOG": "off" },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "exists": false },
+        ".harness/observations.jsonl": { "exists": false }
+      }
+    }
+  },
+  {
+    "name": "session-logger: StopFailure + HARNESS_LEARN=off → 只写 session-log，不写 observations",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "StopFailure",
+      "error_type": "billing_error",
+      "session_id": "sess-no-learn"
+    },
+    "env": { "HARNESS_LEARN": "off" },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "contains": "billing_error" },
+        ".harness/observations.jsonl": { "exists": false }
+      }
+    }
   }
 ]

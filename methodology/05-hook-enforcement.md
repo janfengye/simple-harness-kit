@@ -33,6 +33,7 @@ Claude Code 支持多种 Hook 触发点，核心列表：
 | **PostToolUseFailure** | Agent 调用工具之后（失败） | 记录失败工具调用，避免遗漏黑匣子 |
 | **SessionStart** | 新 session 开始 | 重置陈旧 stage、输出入口 banner、注入 AI directive |
 | **TaskCompleted** | 任务被标记为 completed | 在 EXECUTE/VERIFY 阶段提醒检查验证证据（含 agent team 场景） |
+| **StopFailure** | API 错误结束（rate_limit 等） | 记录到 session-log/observations，下次 session 知道上次怎么挂的 |
 
 Hook 返回值：
 - `exit 0` — 放行

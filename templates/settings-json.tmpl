@@ -167,6 +167,14 @@
         "description": "记录失败工具调用到 session-log + observations"
       }
     ],
+    "StopFailure": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录 API 错误结束（rate_limit / billing_error 等）到 session-log + observations"
+      }
+    ],
     "TaskCompleted": [
       {
         "hooks": [
