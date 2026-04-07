@@ -87,18 +87,22 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 
 **init-prompt.md 为什么没有 Stop**: init-prompt 的 settings.json 示例明确定位为"最小配置"（见其第 89-91 行）。delivery-gate 是可选的交付守门，用户可根据需要追加，不属于最小集。不算漂移。
 
-**待评估事件** — 这些事件 Claude Code 支持但本项目未覆盖，评估聚合在任务 #17：
+**待评估事件** — Claude Code 支持但本项目未覆盖。评估结果（#17）：
 
-| 事件 | gap 类型 | 备注 |
-|------|---|------|
-| TaskCreated | 可能替代 TaskUpdate matcher | 更精确的事件，后续迁移 |
-| TaskCompleted | 同上 | completed 提醒的正确事件 |
-| CwdChanged | 可替代 find-root.js 的被动定位 | 当前 CWD 漂移通过 `scripts/hooks/find-root.js` 解决 |
-| PostToolUseFailure + 失败提醒到 AI | — | 当前只记录，未反馈给 AI |
-| StopFailure | — | API 错误结束 |
-| PreCompact / PostCompact | — | 上下文压缩前后的状态快照 |
-| SessionEnd | — | session 结束汇总 |
-| ConfigChange | — | 配置变更审计 |
+| 事件 | 优先级 | 决策 | 备注 |
+|------|:---:|---|------|
+| TaskCreated | P3 | 不引入 | 阻止建任务弊大于利；现有 PLAN 阶段对执行类工具的限制部分覆盖了"绕过审批就执行"的风险（不严之处由 #20 跟踪） |
+| TaskCompleted | P1 | 下次重构迁移 | 比当前 TaskUpdate matcher 更精确（专为完成事件设计），需新测试 |
+| CwdChanged | P3 | 不引入 | 当前架构不需要它的额外能力（CLAUDE_ENV_FILE 持久化 / watchPaths 更新 / direnv 触发）；CWD 漂移已由 find-root.js 主动定位解决 |
+| StopFailure | P1 | 加入 session-logger | API 错误当前完全不记录，可观测性显著改善 |
+| PostToolUseFailure: 反馈给 AI | P2 | 观察 | 当前 PostToolUseFailure 只记录到 session-log，未利用 hookSpecificOutput.additionalContext 把失败信息回填给 AI；可改善 AI 的纠错能力，但需要先验证记录方案足够 |
+| PreCompact / PostCompact | P2 | 观察 | 当前无 compact 相关痛点 |
+| SessionEnd | P1 | 新增 session-end.js | 自动归档 observations + 触发 harness-learn 分析 |
+| ConfigChange | P2 | 观察 | 单人项目用例不明，团队场景再考虑 |
+
+详细评估见 [`docs/decisions/2026-04-07-lifecycle-events-evaluation.md`](../docs/decisions/2026-04-07-lifecycle-events-evaluation.md)（#17 任务输出）。
+
+**关键发现**: 大部分 lifecycle events 是 observability only（不能 exit 2 阻止），适合做"记录/通知"层，不适合做"执行守门"层。Harness 核心守门仍依赖 PreToolUse + Stop。
 
 **故意不覆盖的事件**:
 
