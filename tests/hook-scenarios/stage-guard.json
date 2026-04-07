@@ -240,7 +240,7 @@
     }
   },
   {
-    "name": "stage-guard: REVIEW 阶段注入交付检查清单",
+    "name": "stage-guard: REVIEW 阶段注入交付检查清单 + push 提醒",
     "hook": "harness-stage-guard.js",
     "stdin": { "tool_name": "Bash", "tool_input": { "command": "echo done" } },
     "setup": {
@@ -249,7 +249,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stderr": ["交付前", "真实验证"],
+      "stderr": ["交付前", "真实验证", "push 提醒", "@{u}..HEAD"],
       "stdout": "passthrough"
     }
   },

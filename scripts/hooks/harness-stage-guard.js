@@ -166,6 +166,11 @@ Gate: Layer 2 全部 PASS + Layer 3 verdict = PASS
 Gate: 前 6 项全部 ✓ + 第 7 项自动完成
 达标→交付，不达标→进入 FEEDBACK。
 
+[push 提醒] 当前任务的所有 commit 应在 REVIEW 阶段 push 到远程：
+  git log --oneline @{u}..HEAD  # 查看未推送的 commit
+  git push origin <branch>      # push（仅 REVIEW 阶段允许）
+不要让本地 commit 堆积跨任务。
+
 [重要] 向用户交付结果之前，必须逐项回答上述检查清单，不能用"看起来不错"代替。
 `,
   FEEDBACK: `[FEEDBACK 阶段要求]

@@ -96,8 +96,54 @@ ai=$(git log --grep="Co-Authored-By:" --oneline | wc -l)
 echo "AI 辅助占比: $ai / $total"
 ```
 
+## Commit / Push 阶段规则
+
+Harness 不仅约束 commit message 格式，也约束 **commit 和 push 的时机**。这是为了避免 AI 在未验证或未审查的状态下污染仓库历史。
+
+### 阶段允许矩阵
+
+| 操作 | 允许阶段 | 不允许阶段 | 理由 |
+|------|----------|------------|------|
+| `git commit` | VERIFY, REVIEW, FEEDBACK | PLAN, SETUP, EXECUTE | EXECUTE 阶段未验证就 commit 容易留下未测试的代码 |
+| `git push` | REVIEW | PLAN, SETUP, EXECUTE, VERIFY, FEEDBACK | push 是任务最终交付动作，必须先完成验证和审查 |
+
+verification-gate hook 会强制这两条规则。不符合时 exit 2 阻止操作。
+
+### 何时 commit
+
+- VERIFY 阶段：QA 通过 + 验证证据产出后立即 commit
+- REVIEW 阶段：审查中发现需要修复的小问题，可以补充 commit
+- FEEDBACK 阶段：F1-F5 流程产生的修复 commit
+
+**证据时效性要求**（verification-gate 强制）: commit 时必须存在至少一份验证证据文件，且其 mtime 必须晚于 current-stage.json 的 since。这条规则在 VERIFY/REVIEW/FEEDBACK 三个阶段的 commit 都生效，不只是 VERIFY。
+
+证据文件可以是以下任一（按优先级查找）:
+- `docs/verification-report.md`
+- `.harness/last-verification.json`
+- `.harness/verify-evidence.md`
+
+每个任务通常产生 1 个主 commit（VERIFY 后），可能有 0-N 个修复 commit。
+
+### 何时 push
+
+- 任务完成进入 REVIEW 阶段后，把所有未推送的 commit 一起 push
+- 不要在每个 commit 后都 push（碎片化推送增加远程噪音）
+- 不要等多个任务积累后再统一 push（应该任务完成立即 push，避免本地堆积造成审查困难）
+
+**核心原则**: 一个完整 Harness 闭环（PLAN→EXECUTE→VERIFY→REVIEW）→ 一次 push。
+
+### REVIEW 阶段的 push 提醒
+
+stage-guard 在 REVIEW 阶段的 directive 中应包含 "检查 unpushed commits 并 push" 的提醒，避免 commit 后忘记 push 导致本地堆积。
+
+### 强制例外
+
+如果遇到必须绕过 gate 的情况（如紧急修复），用 `HARNESS_SKIP_GATE=1 git push ...`。verification-gate 会放行但要求记录原因。
+
 ## Hook 强制执行
 
 通过 Hook 在 commit 前检查：如果当前 session 是 AI 工具，commit message 必须包含 Co-Authored-By。
 
 详见 `scripts/hooks/commit-check.js`。
+
+verification-gate.js 强制 commit/push 的阶段规则，详见 `scripts/hooks/verification-gate.js`。
