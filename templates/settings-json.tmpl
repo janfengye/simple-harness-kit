@@ -1,5 +1,13 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-session-start.js" }
+        ],
+        "description": "新 session 重置陈旧阶段 + 输出入口 banner"
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -157,6 +165,14 @@
           { "type": "command", "command": "node scripts/hooks/session-logger.js" }
         ],
         "description": "记录失败工具调用到 session-log + observations"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/delivery-gate.js" }
+        ],
+        "description": "交付前合规检查——阻止在 EXECUTE/VERIFY(无证据) 阶段宣称完成"
       }
     ]
   }

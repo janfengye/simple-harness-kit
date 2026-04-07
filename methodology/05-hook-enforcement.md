@@ -22,6 +22,8 @@ Rules 和 CLAUDE.md 的内容在 session 开始时加载到上下文。随着对
 
 ## Hook 类型
 
+> 完整的工具 / 事件覆盖矩阵见 [15-hook-coverage-matrix.md](./15-hook-coverage-matrix.md)。本章只介绍核心类型。
+
 Claude Code 支持三种 Hook 触发点：
 
 | 触发点 | 时机 | 用途 |
@@ -48,14 +50,21 @@ Hook 分为两级：
 
 ### 0. Harness Stage Guard（阶段声明强制）[必选]
 
-**触发：** PreToolUse:Bash, PreToolUse:Edit, PreToolUse:Write, PreToolUse:Agent
-**作用：** 强制 Agent 在新 session 中声明当前 Harness 阶段
+**触发：** PreToolUse:* — Bash/Edit/Write/Agent（写类） + Read/Grep/Glob/WebFetch/WebSearch（读类） + TaskUpdate（任务管理）。完整覆盖见 [15-hook-coverage-matrix.md](./15-hook-coverage-matrix.md)。
+**作用：** 强制 Agent 在新 session 中声明当前 Harness 阶段；PLAN 阶段阻止写类工具
 
-```javascript
-// 检查 .harness/current-stage.json 是否存在
-// 不存在 → stderr 输出 Harness 6 阶段 Loop 提醒
-// 存在但超过 2 小时 → 提醒确认阶段是否仍然正确
+```text
+检查 .harness/current-stage.json 是否存在
+  不存在 → exit 2 阻止（Write .harness/current-stage.json 是唯一豁免）
+  解析异常 / stage 值无效 → exit 2 阻止
+  first-call guard 未通过 → exit 2（要求 AI 先输出阶段声明，TASK_TOOLS 跳过）
+  PLAN 阶段非读类/非任务管理工具 → exit 2
+  切换到 REVIEW 但流程或证据不完整 → exit 2
+  其他 → exit 0 放行，必要时注入阶段 directive 和 session-log 提醒
+  存在但超过 2 小时 → 提醒确认阶段是否仍然正确（不阻止）
 ```
+
+完整行为见 [`scripts/hooks/harness-stage-guard.js`](../scripts/hooks/harness-stage-guard.js) 顶部注释。
 
 **为什么排在第一位：** Rules 和 CLAUDE.md 级别的流程指令容易被其他 prompt（如外部 skill）覆盖。Hook 在工具调用管道上拦截，优先级高于所有 LLM 层面的指令。实测证明：即使项目已有完整方法论文档，新 session 仍可能不遵守 Harness 流程——这是 LLM 注意力机制的固有特性，必须用 Hook 兜底。
 
@@ -194,125 +203,23 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
 
 ## settings.json 模板
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "TaskUpdate",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "WebFetch",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "WebSearch",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/verification-gate.js" }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/delivery-review.js" }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/agent-check.js" }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
-        ]
-      }
-    ]
-  }
-}
-```
+完整的 `settings.json` 模板是 `templates/settings-json.tmpl`，它是实际生效的 source of truth。本节不重复展示所有 matcher，以免出现"多份竞争性真实源"导致的漂移。
+
+- 完整模板: [templates/settings-json.tmpl](../templates/settings-json.tmpl)
+- 最小配置示例（init 时必选部分）: [init-prompt.md §settings.json 最小配置](../init-prompt.md)
+- 每个工具/事件被哪些 hook 覆盖及理由: [15-hook-coverage-matrix.md](./15-hook-coverage-matrix.md)
+
+**快速一瞥** — 模板包含五个顶层 key：
+
+| 顶层 key | 作用 | 挂载脚本 |
+|----------|------|----------|
+| `SessionStart` | 新 session 初始化 | `harness-session-start.js` |
+| `PreToolUse` | 工具调用前守门 | `harness-stage-guard.js`（多 matcher） + `safety-guard` + `verification-gate` + `delivery-review` + `commit-check` + `agent-check` + `context-monitor` |
+| `PostToolUse` | 成功工具调用记录 | `session-logger.js`（Agent/Bash/Edit/Write） |
+| `PostToolUseFailure` | 失败工具调用记录 | `session-logger.js`（全局） |
+| `Stop` | 交付前守门 | `delivery-gate.js` |
+
+修改 settings.json 时必须同步矩阵和模板，详见矩阵的 E 节一致性检查清单。
 
 ## Hook 设计原则
 
@@ -329,7 +236,7 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
 - **不修改 Agent 的输出** — Hook 是守门人，不是干预者
 - **不做复杂的业务逻辑** — Hook 应该快速、确定性
 - **不产生副作用** — 除了计数器等轻量记录
-- **不阻止读操作** — Read/Grep/Glob 永远放行
+- **读操作不做内容过滤** — Read/Grep/Glob/WebFetch/WebSearch 一旦进入工具执行阶段不会被拦截内容。注意：这些工具仍然受 first-call guard 和 stage-guard 的流程约束（例如本轮第一次调用前必须先输出阶段声明），只是 stage-guard 不会以"路径/内容不合规"为由阻止它们
 
 ### 3. 项目定制
 

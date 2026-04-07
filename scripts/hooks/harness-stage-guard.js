@@ -8,11 +8,17 @@
  *
  * 机制:
  * 1. 检查 .harness/current-stage.json 是否存在
- * 2. 不存在 → stderr 输出 Harness 流程提醒，要求声明阶段
- * 3. stage = "OFF" → 会话级关闭，每次调用提醒"Harness 已关闭"
- * 4. 存在但超过 2 小时 → 提醒确认阶段是否仍然正确
+ * 2. 不存在 → exit 2 阻止，要求声明阶段（Write .harness/current-stage.json 是唯一豁免）
+ * 3. 解析/读取异常 → exit 2 阻止（损坏的 stage 文件应该被修复而不是绕过）
+ * 4. stage 字段值无效（不是 PLAN|SETUP|EXECUTE|VERIFY|REVIEW|FEEDBACK|OFF）→ exit 2 阻止
+ * 5. first-call guard → 本轮任务第一次工具调用时 exit 2，要求先输出阶段声明（TASK_TOOLS 跳过）
+ * 6. stage = "PLAN" → 只放行 READ_TOOLS + TASK_TOOLS + Write 计划/阶段文件，其他 exit 2
+ * 7. 切换到 "REVIEW" → 检查 stage-history 是否经过 EXECUTE 和 VERIFY + 验证证据存在，缺任何一项 exit 2
+ * 8. stage = "OFF" → 会话级关闭，每次调用提醒"Harness 已关闭"，放行
+ * 9. 其他非 PLAN 阶段 → 放行，stderr 注入阶段 directive 和 session-log 提醒
+ * 10. 存在但超过 2 小时 → 提醒确认阶段是否仍然正确（不阻止）
  *
- * 不阻止工具调用（exit 0），只通过 stderr 注入提醒。
+ * 退出码说明：exit 0 放行 / exit 2 阻止并阻断工具调用。
  *
  * current-stage.json 格式:
  * { "stage": "PLAN|SETUP|EXECUTE|VERIFY|REVIEW|FEEDBACK|OFF", "since": "ISO8601", "task": "描述" }
@@ -50,7 +56,7 @@ const REVIEW_GATE_BLOCK = `[Harness Stage Guard] 切换到 REVIEW 被阻止（C-
 
 REVIEW Gate 检查未通过。切换到 REVIEW 前必须满足：
 
-1. 流程完整性：必须经过 PLAN → EXECUTE → VERIFY（检查 .harness/stage-history.jsonl）
+1. 流程完整性：必须经过 EXECUTE 和 VERIFY 阶段（检查 .harness/stage-history.jsonl）
 2. 验证证据：VERIFY 阶段必须产出验证报告文件（以下至少一个）：
    - docs/verification-report.md
    - .harness/last-verification.json
@@ -66,8 +72,8 @@ REVIEW Gate 检查未通过。切换到 REVIEW 前必须满足：
 // 交付前检查清单（REVIEW 阶段注入）
 const REVIEW_DELIVERY_CHECK = `[Harness Stage Guard] 交付前检查清单（C-GATE-03）：
 
-在向用户交付结果之前，逐项确认：
-  [ ] 流程合规：是否按 PLAN → EXECUTE → VERIFY 执行？
+在向用户交付结果之前，逐项确认（这是建议自检清单，非机器强制校验）：
+  [ ] 流程合规：是否按 PLAN → EXECUTE → VERIFY 执行？（Gate 只机器校验 EXECUTE + VERIFY + 证据）
   [ ] QA 达标：验证报告是否完整？量化证据是否充分？
   [ ] 真实验证：功能性变更是否在真实场景跑过（不只是 mock）？
   [ ] 需求完整：所有需求是否全部处理？
