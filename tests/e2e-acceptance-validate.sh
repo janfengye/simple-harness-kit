@@ -16,6 +16,15 @@
 
 set -uo pipefail
 
+# 真实源: tests/required-wiring.json （相对本脚本）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REQUIRED_WIRING_JSON="$SCRIPT_DIR/required-wiring.json"
+
+if [ ! -f "$REQUIRED_WIRING_JSON" ]; then
+  echo "ERROR: $REQUIRED_WIRING_JSON 不存在。这是单一真实源，必须和脚本在同一目录。"
+  exit 1
+fi
+
 PASS=0
 FAIL=0
 ERRORS=()
@@ -75,11 +84,15 @@ if [ -f .claude/settings.json ]; then
 fi
 
 # ── C. settings.json 顶层事件完整性 ──
-# 与 init-prompt.md 的最小配置对齐：4 个必选事件。Stop 不在最小集，归为可选。
-section "C. settings.json 顶层事件完整性（最小集）"
+# 事件集从 required-wiring.json 派生（去重的 event 列表）
+section "C. settings.json 顶层事件完整性（从 required-wiring.json 派生）"
 
-REQUIRED_EVENTS=(SessionStart PreToolUse PostToolUse PostToolUseFailure)
-for ev in "${REQUIRED_EVENTS[@]}"; do
+REQUIRED_EVENTS=$(node -e "
+const w = JSON.parse(require('fs').readFileSync('$REQUIRED_WIRING_JSON','utf8')).wirings;
+console.log([...new Set(w.map(x => x.event))].join(' '));
+" 2>/dev/null)
+
+for ev in $REQUIRED_EVENTS; do
   if [ -f .claude/settings.json ] && grep -q "\"$ev\":" .claude/settings.json; then
     ok "event present: $ev"
   else
@@ -95,10 +108,16 @@ else
 fi
 
 # ── D. 必选 PreToolUse matcher 存在性 ──
-section "D. 必选 PreToolUse matcher"
+# matcher 集从 required-wiring.json 派生（仅 PreToolUse 的非 null matcher）
+section "D. 必选 PreToolUse matcher（从 required-wiring.json 派生）"
 
-REQUIRED_MATCHERS=(Bash Edit Write Agent Read Grep Glob WebFetch WebSearch TaskUpdate)
-for m in "${REQUIRED_MATCHERS[@]}"; do
+REQUIRED_MATCHERS=$(node -e "
+const w = JSON.parse(require('fs').readFileSync('$REQUIRED_WIRING_JSON','utf8')).wirings;
+const set = new Set(w.filter(x => x.event === 'PreToolUse' && x.matcher).map(x => x.matcher));
+console.log([...set].join(' '));
+" 2>/dev/null)
+
+for m in $REQUIRED_MATCHERS; do
   if [ -f .claude/settings.json ] && grep -q "\"matcher\": \"$m\"" .claude/settings.json; then
     ok "matcher present: $m"
   else
@@ -107,35 +126,20 @@ for m in "${REQUIRED_MATCHERS[@]}"; do
 done
 
 # ── D2. matcher command 指向正确脚本（反 noop bypass）──
-# 用 JS 解析 settings.json，精确校验每个必选 matcher 的 command 包含对应脚本名
-# 防止 '挂了 matcher 但指向 noop.js' 的伪 PASS
+# wiring 列表从 required-wiring.json 派生，单一真实源，不再硬编码副本
 section "D2. matcher command 指向正确脚本"
 
 if [ -f .claude/settings.json ]; then
-  # 必需的 matcher → 必需的 command 包含的脚本名片段
-  # 格式: "event:matcher:scriptname"
-  # 与 init-prompt.md 最小配置（L97-120）的 settings.json 示例严格对齐
-  REQUIRED_WIRING=(
-    "SessionStart:*:harness-session-start.js"
-    "PreToolUse:Bash:harness-stage-guard.js"
-    "PreToolUse:Edit:harness-stage-guard.js"
-    "PreToolUse:Write:harness-stage-guard.js"
-    "PreToolUse:Agent:harness-stage-guard.js"
-    "PreToolUse:TaskUpdate:harness-stage-guard.js"
-    "PreToolUse:Read:harness-stage-guard.js"
-    "PreToolUse:Grep:harness-stage-guard.js"
-    "PreToolUse:Glob:harness-stage-guard.js"
-    "PreToolUse:WebFetch:harness-stage-guard.js"
-    "PreToolUse:WebSearch:harness-stage-guard.js"
-    "PreToolUse:Bash:safety-guard.js"
-    "PostToolUse:Agent:session-logger.js"
-    "PostToolUse:Bash:session-logger.js"
-    "PostToolUse:Edit:session-logger.js"
-    "PostToolUse:Write:session-logger.js"
-    "PostToolUseFailure:*:session-logger.js"
-  )
+  # 从真实源读取 wiring，输出 "event:matcher:script" 三元组
+  REQUIRED_WIRING_LINES=$(node -e "
+const w = JSON.parse(require('fs').readFileSync('$REQUIRED_WIRING_JSON','utf8')).wirings;
+for (const x of w) {
+  console.log((x.event || '') + ':' + (x.matcher || '*') + ':' + (x.script || ''));
+}
+" 2>/dev/null)
 
-  for wiring in "${REQUIRED_WIRING[@]}"; do
+  while IFS= read -r wiring; do
+    [ -z "$wiring" ] && continue
     event=$(echo "$wiring" | cut -d: -f1)
     matcher=$(echo "$wiring" | cut -d: -f2)
     script=$(echo "$wiring" | cut -d: -f3)
@@ -156,7 +160,7 @@ if [ -f .claude/settings.json ]; then
     else
       fail "wiring missing: $event:$matcher → $script"
     fi
-  done
+  done <<< "$REQUIRED_WIRING_LINES"
 fi
 
 # ── E. Hook 脚本语法 ──

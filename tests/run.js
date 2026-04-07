@@ -242,4 +242,25 @@ if (failures.length > 0) {
   console.log();
 }
 
-process.exit(failed > 0 ? 1 : 0);
+// ── Template Integrity Tests ──
+// 校验 templates/settings-json.tmpl 等 kit 模板文件的结构完整性，
+// 防止模板层漂移潜伏到 E2E 才被发现。详见 tests/template-integrity.js。
+const { runTemplateIntegrityTests } = require('./template-integrity');
+const tpl = runTemplateIntegrityTests();
+console.log('  Template Integrity Tests\n');
+for (const r of tpl.results) {
+  if (r.ok) {
+    console.log(`  PASS  ${r.name}`);
+  } else {
+    console.log(`  FAIL  ${r.name}`);
+    console.log(`        ${r.reason}`);
+  }
+}
+console.log(`\n  ${tpl.pass} passed, ${tpl.fail} failed, ${tpl.results.length} total\n`);
+
+const totalFailed = failed + tpl.fail;
+const totalTests = scenarios.length + tpl.results.length;
+console.log(`  ══════════════════════════════`);
+console.log(`  总计: ${passed + tpl.pass} passed, ${totalFailed} failed, ${totalTests} total\n`);
+
+process.exit(totalFailed > 0 ? 1 : 0);

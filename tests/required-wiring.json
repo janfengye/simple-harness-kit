@@ -1,0 +1,22 @@
+{
+  "_comment": "Single source of truth for required hook wiring in the minimum Harness config. Consumed by tests/template-integrity.js AND tests/e2e-acceptance-validate.sh. If you change this, re-run 'node tests/run.js' — template-integrity will verify both templates/settings-json.tmpl AND init-prompt.md contain exactly this set.",
+  "wirings": [
+    { "event": "SessionStart", "matcher": null, "script": "harness-session-start.js" },
+    { "event": "PreToolUse", "matcher": "Bash", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Edit", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Write", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Agent", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "TaskUpdate", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Read", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Grep", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Glob", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "WebFetch", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "WebSearch", "script": "harness-stage-guard.js" },
+    { "event": "PreToolUse", "matcher": "Bash", "script": "safety-guard.js" },
+    { "event": "PostToolUse", "matcher": "Agent", "script": "session-logger.js" },
+    { "event": "PostToolUse", "matcher": "Bash", "script": "session-logger.js" },
+    { "event": "PostToolUse", "matcher": "Edit", "script": "session-logger.js" },
+    { "event": "PostToolUse", "matcher": "Write", "script": "session-logger.js" },
+    { "event": "PostToolUseFailure", "matcher": null, "script": "session-logger.js" }
+  ]
+}
