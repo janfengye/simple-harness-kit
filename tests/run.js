@@ -78,12 +78,16 @@ function loadScenarios() {
 
 // ── 创建临时目录并预置文件 ──
 
+// 生成最新动态时间戳（1 分钟前，距离当前足够新可通过 since 校验）
+function recentTimestamp() {
+  return new Date(Date.now() - 60 * 1000).toISOString();
+}
+
 function setupTempDir(scenario) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-test-'));
 
   if (scenario.setup) {
-    // 支持动态时间戳占位符
-    const recentTs = new Date(Date.now() - 60 * 1000).toISOString(); // 1 分钟前
+    const recentTs = recentTimestamp();
     for (const [filePath, rawContent] of Object.entries(scenario.setup)) {
       const content = rawContent.replace(/RECENT_TIMESTAMP/g, recentTs);
       const fullPath = path.join(tmpDir, filePath);
@@ -104,7 +108,10 @@ function runScenario(scenario) {
   }
 
   const tmpDir = setupTempDir(scenario);
-  const stdinData = scenario.stdin ? JSON.stringify(scenario.stdin) : '';
+  // stdin 也支持 RECENT_TIMESTAMP 占位符替换（测试场景可在 tool_input.content 等字段用此占位符）
+  const stdinData = scenario.stdin
+    ? JSON.stringify(scenario.stdin).replace(/RECENT_TIMESTAMP/g, recentTimestamp())
+    : '';
   const env = {
     ...process.env,
     ...(scenario.env || {}),

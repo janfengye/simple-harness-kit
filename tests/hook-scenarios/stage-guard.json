@@ -13,7 +13,10 @@
     "hook": "harness-stage-guard.js",
     "stdin": {
       "tool_name": "Write",
-      "tool_input": { "file_path": ".harness/current-stage.json" }
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"bootstrap\"}"
+      }
     },
     "expect": {
       "exitCode": 0,
@@ -167,7 +170,7 @@
       "tool_name": "Write",
       "tool_input": {
         "file_path": ".harness/current-stage.json",
-        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}"
       }
     },
     "setup": {
@@ -186,7 +189,7 @@
       "tool_name": "Write",
       "tool_input": {
         "file_path": ".harness/current-stage.json",
-        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}"
       }
     },
     "setup": {
@@ -207,7 +210,7 @@
       "tool_name": "Write",
       "tool_input": {
         "file_path": ".harness/current-stage.json",
-        "content": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+        "content": "{\"stage\":\"REVIEW\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}"
       }
     },
     "setup": {
@@ -227,7 +230,7 @@
       "tool_name": "Write",
       "tool_input": {
         "file_path": ".harness/current-stage.json",
-        "content": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}"
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}"
       }
     },
     "setup": {
@@ -376,6 +379,169 @@
       "exitCode": 0,
       "stderrNot": ["PLAN 阶段禁止"],
       "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since 是未来时间 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"2099-01-01T00:00:00Z\",\"task\":\"future\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段是未来时间", "date -u"]
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since 过于陈旧 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"ancient\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段过于陈旧", "date -u"]
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since 不是合法 ISO8601 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"not-a-date\",\"task\":\"invalid\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["不是合法 ISO8601 时间戳"]
+    }
+  },
+  {
+    "name": "stage-guard: bootstrap Write + since 未来时间 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"PLAN\",\"since\":\"2099-01-01T00:00:00Z\",\"task\":\"future bootstrap\"}"
+      }
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段是未来时间"]
+    }
+  },
+  {
+    "name": "stage-guard: bootstrap Write + 缺 since → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"PLAN\",\"task\":\"no since\"}"
+      }
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段缺失"]
+    }
+  },
+  {
+    "name": "stage-guard: invalid-stage recovery + since 未来时间 → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"PLAN\",\"since\":\"2099-01-01T00:00:00Z\",\"task\":\"recovery future\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"BOGUS\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"invalid\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段是未来时间"]
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since 非 ISO 但 Date.parse 接受 (RFC2822) → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"Tue, 07 Apr 2026 06:20:34 GMT\",\"task\":\"rfc2822\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["不是合法 ISO8601 时间戳"]
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + 缺 since → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"task\":\"no since\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["since 字段缺失"]
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since 形状合法但日期非法 (2026-99-99) → 阻止",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"2026-99-99T99:99:99Z\",\"task\":\"nan\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["形状合法但日期值不合法"]
     }
   }
 ]
