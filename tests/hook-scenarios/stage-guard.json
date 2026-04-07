@@ -322,5 +322,60 @@
       "stderrNot": ["标记任务完成"],
       "stdout": "passthrough"
     }
+  },
+  {
+    "name": "stage-guard: PLAN + WebFetch → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "WebFetch", "tool_input": { "url": "https://example.com", "prompt": "test" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["PLAN 阶段"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + WebSearch → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "WebSearch", "tool_input": { "query": "test" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["PLAN 阶段"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: EXECUTE + WebFetch → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "WebFetch", "tool_input": { "url": "https://example.com", "prompt": "test" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: PLAN + TaskUpdate(in_progress) → 放行",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "in_progress" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["PLAN 阶段禁止"],
+      "stdout": "passthrough"
+    }
   }
 ]

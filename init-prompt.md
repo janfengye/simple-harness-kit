@@ -113,6 +113,8 @@ settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
       { "matcher": "Read", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Grep", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Glob", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "WebFetch", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
+      { "matcher": "WebSearch", "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] },
       { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node scripts/hooks/safety-guard.js" }] }
     ],
     "PostToolUse": [
@@ -120,6 +122,9 @@ settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
       { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] },
       { "matcher": "Edit", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] },
       { "matcher": "Write", "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] }
+    ],
+    "PostToolUseFailure": [
+      { "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] }
     ]
   }
 }

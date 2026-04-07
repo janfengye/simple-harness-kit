@@ -58,6 +58,20 @@
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
+        "matcher": "WebFetch",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
+      },
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
@@ -135,6 +149,14 @@
           { "type": "command", "command": "node scripts/hooks/session-logger.js" }
         ],
         "description": "记录文件创建到 session-log"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ],
+        "description": "记录失败工具调用到 session-log + observations"
       }
     ]
   }

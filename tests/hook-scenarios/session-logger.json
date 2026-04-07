@@ -20,6 +20,26 @@
     }
   },
   {
+    "name": "session-logger: Bash 成功 → observations 含 status=success",
+    "hook": "session-logger.js",
+    "stdin": {
+      "hook_event_name": "PostToolUse",
+      "tool_name": "Bash",
+      "tool_input": { "command": "ls -la" },
+      "session_id": "test-session-success"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/observations.jsonl": { "contains": "\"status\":\"success\"" }
+      }
+    }
+  },
+  {
     "name": "session-logger: Agent 工具 → 记录描述和 prompt",
     "hook": "session-logger.js",
     "stdin": {
@@ -62,6 +82,33 @@
     "stdin": null,
     "expect": {
       "exitCode": 0
+    }
+  },
+  {
+    "name": "session-logger: PostToolUseFailure Bash → 记录失败到 session-log + observations",
+    "hook": "session-logger.js",
+    "stdin": {
+      "session_id": "abc123",
+      "hook_event_name": "PostToolUseFailure",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "npm test",
+        "description": "Run test suite"
+      },
+      "tool_use_id": "toolu_01ABC123",
+      "error": "Command exited with non-zero status code 1",
+      "is_interrupt": false
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/session-log.md": { "contains": "[失败]" },
+        ".harness/observations.jsonl": { "contains": "\"status\":\"failure\"" }
+      }
     }
   },
   {

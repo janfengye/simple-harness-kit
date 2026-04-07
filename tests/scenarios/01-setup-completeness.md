@@ -16,7 +16,7 @@
 - [ ] 生成 `.claude/rules/` 下 ≥4 个规则文件
 - [ ] 生成 `scripts/hooks/` 下 ≥6 个 Hook 脚本
 - [ ] 生成 `docs/constraints.md`
-- [ ] 生成 `.claude/settings.json`，包含 PreToolUse + PostToolUse 配置
+- [ ] 生成 `.claude/settings.json`，包含 PreToolUse + PostToolUse + PostToolUseFailure 配置
 - [ ] Hook 实弹测试通过（AI 主动触发一次拦截并记录结果）
 - [ ] `.harness/session-log.md` 已创建并开始记录
 - [ ] AI 自动识别了项目技术栈（未要求用户手动提供构建命令）

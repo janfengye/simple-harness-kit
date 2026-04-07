@@ -4,7 +4,7 @@
 /**
  * Session Logger Hook — 记录关键动作 + 结构化观察数据
  * @version 0.6.1
- * 触发: PostToolUse:*
+ * 触发: PostToolUse:* + PostToolUseFailure（记录成功和失败的工具调用）
  *
  * 两个输出:
  * 1. .harness/session-log.md — 人可读的 Markdown 日志
@@ -45,6 +45,12 @@ process.stdin.on('end', () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
+    // 判定成功/失败：PostToolUseFailure 事件或显式 error 字段
+    const isFailure = input.hook_event_name === 'PostToolUseFailure' || !!input.error;
+    const status = isFailure ? 'failure' : 'success';
+    const errorMsg = isFailure ? (input.error || 'unknown error') : '';
+    const failTag = isFailure ? '[失败] ' : '';
+
     const dir = path.dirname(LOG_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
@@ -53,13 +59,17 @@ process.stdin.on('end', () => {
     if (tool === 'Agent') {
       const desc = input.tool_input?.description || '';
       const prompt = (input.tool_input?.prompt || '').substring(0, 100);
-      entry = `### [${timeStr}] Agent 派发\n- **描述**: ${desc}\n- **Prompt 摘要**: ${prompt}...\n`;
+      entry = `### [${timeStr}] ${failTag}Agent 派发\n- **描述**: ${desc}\n- **Prompt 摘要**: ${prompt}...\n`;
     } else if (tool === 'Bash') {
       const cmd = (input.tool_input?.command || '').substring(0, 150);
-      entry = `### [${timeStr}] Bash 执行\n- **命令**: \`${cmd}\`\n`;
+      entry = `### [${timeStr}] ${failTag}Bash 执行\n- **命令**: \`${cmd}\`\n`;
     } else if (tool === 'Edit' || tool === 'Write') {
       const filePath = input.tool_input?.file_path || '';
-      entry = `### [${timeStr}] ${tool}\n- **文件**: ${filePath}\n`;
+      entry = `### [${timeStr}] ${failTag}${tool}\n- **文件**: ${filePath}\n`;
+    }
+
+    if (entry && isFailure && errorMsg) {
+      entry += `- **错误**: ${errorMsg.substring(0, 300)}\n`;
     }
 
     if (entry) {
@@ -102,7 +112,11 @@ process.stdin.on('end', () => {
         tool: tool,
         input: inputSummary,
         session: input.session_id || '',
+        status: status,
       };
+      if (isFailure) {
+        observation.error = errorMsg.substring(0, 500);
+      }
 
       fs.appendFileSync(OBS_FILE, JSON.stringify(observation) + '\n');
     }

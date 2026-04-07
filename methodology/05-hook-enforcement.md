@@ -22,12 +22,13 @@ Rules 和 CLAUDE.md 的内容在 session 开始时加载到上下文。随着对
 
 ## Hook 类型
 
-Claude Code 支持两种 Hook 触发点：
+Claude Code 支持三种 Hook 触发点：
 
 | 触发点 | 时机 | 用途 |
 |--------|------|------|
 | **PreToolUse** | Agent 调用工具之前 | 拦截违规操作、检查前置条件、注入提醒 |
-| **PostToolUse** | Agent 调用工具之后 | 验证产出、记录行为、触发后续检查 |
+| **PostToolUse** | Agent 调用工具之后（成功） | 验证产出、记录行为、触发后续检查 |
+| **PostToolUseFailure** | Agent 调用工具之后（失败） | 记录失败工具调用，避免遗漏黑匣子 |
 
 Hook 返回值：
 - `exit 0` — 放行
@@ -62,8 +63,8 @@ Hook 分为两级：
 
 ### 0.5 Session Logger（全过程记录）[必选]
 
-**触发：** PostToolUse:Agent, PostToolUse:Bash, PostToolUse:Edit, PostToolUse:Write
-**作用：** 每次工具调用后自动追加日志到 `.harness/session-log.md`
+**触发：** PostToolUse + PostToolUseFailure（覆盖 Agent/Bash/Edit/Write 等工具，记录成功和失败的工具调用）
+**作用：** 每次工具调用后自动追加日志到 `.harness/session-log.md`，失败调用同样进入黑匣子
 
 这是整个 Harness 的"黑匣子"。AI 可能忘记手动记录，但 Hook 不会忘。记录内容包括 Agent 派发、命令执行、文件变更。人的指示和偏差分析仍需 AI 在规则引导下主动记录，但工具操作层面有了 100% 的兜底。
 
@@ -228,6 +229,18 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
         ]
       },
       {
+        "matcher": "WebFetch",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
@@ -261,6 +274,39 @@ if (counter.count >= 50 && counter.count % 25 === 0) {
         "matcher": "Write",
         "hooks": [
           { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
         ]
       }
     ]
