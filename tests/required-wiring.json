@@ -17,6 +17,7 @@
     { "event": "PostToolUse", "matcher": "Bash", "script": "session-logger.js" },
     { "event": "PostToolUse", "matcher": "Edit", "script": "session-logger.js" },
     { "event": "PostToolUse", "matcher": "Write", "script": "session-logger.js" },
-    { "event": "PostToolUseFailure", "matcher": null, "script": "session-logger.js" }
+    { "event": "PostToolUseFailure", "matcher": null, "script": "session-logger.js" },
+    { "event": "TaskCompleted", "matcher": null, "script": "harness-stage-guard.js" }
   ]
 }

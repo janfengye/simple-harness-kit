@@ -57,12 +57,12 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 
 | 工具 | TASK_TOOLS | 模板注册 | 理由 |
 |------|:---:|:---:|------|
-| TaskUpdate | ✓ | ✓ | EXECUTE/VERIFY 阶段标记 completed 时提醒检查验证证据 |
+| TaskUpdate | ✓ | ✓ | 作为 TASK_TOOLS 成员：first-call guard 跳过 + PLAN 阶段放行。completed 提醒逻辑已迁移到 TaskCompleted lifecycle event (#24) |
 | TaskCreate | ✓ | ○ | 脚本跳过 first-call guard 并在 PLAN 阶段放行，但模板未注册 matcher，意味着 Claude Code 根本不会调用 hook — 是"意图有，注册无"的状态 |
 | TaskList | ✓ | ○ | 同上 |
 | TaskGet | ✓ | ○ | 同上 |
 
-**已知状态**: `TASK_TOOLS` 数组里有 4 个工具，但 `templates/settings-json.tmpl` 和 `init-prompt.md` 都只注册了 `TaskUpdate` 的 matcher。这是故意的 — 只有 TaskUpdate 需要 completed 提醒，其他三个注册 matcher 反而增加 hook 调用开销。脚本里把它们放入 `TASK_TOOLS` 是为了假如未来注册时也自动享受"跳过 first-call guard + PLAN 阶段放行"的行为。
+**已知状态**: `TASK_TOOLS` 数组里有 4 个工具，但 `templates/settings-json.tmpl` 和 `init-prompt.md` 都只注册了 `TaskUpdate` 的 matcher。TaskUpdate matcher 存在是为了让 first-call guard 跳过 TaskUpdate 调用 + 在 PLAN 阶段放行（与 completed 提醒无关，那已迁到 TaskCompleted event）。其他三个（TaskCreate/TaskList/TaskGet）的 TASK_TOOLS 成员身份是"意图有，注册无"状态，将来如果需要注册 matcher 时会自动享受跳过逻辑。
 
 ### 其他
 
@@ -83,6 +83,7 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | PreToolUse | ✓ | ✓ | ✓ | stage-guard / safety-guard / verification-gate / delivery-review / commit-check / agent-check / context-monitor | 核心拦截点 |
 | PostToolUse | ✓ | ✓ | ✓ | session-logger | 成功工具调用记录 |
 | PostToolUseFailure | ✓ | ✓ | ✓ | session-logger | 失败工具调用记录（v0.6.2 加入） |
+| TaskCompleted | ✓ | ✓ | ✓ | harness-stage-guard.js | 任务标记完成时在 EXECUTE/VERIFY 提醒检查证据（v0.6.3 迁移自 TaskUpdate matcher） |
 | Stop | ✓ | ✓ | — | delivery-gate.js | 交付前拦截 EXECUTE（总是阻止）和 VERIFY（无证据时阻止） |
 
 **init-prompt.md 为什么没有 Stop**: init-prompt 的 settings.json 示例明确定位为"最小配置"（见其第 89-91 行）。delivery-gate 是可选的交付守门，用户可根据需要追加，不属于最小集。不算漂移。
@@ -92,7 +93,7 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | 事件 | 优先级 | 决策 | 备注 |
 |------|:---:|---|------|
 | TaskCreated | P3 | 不引入 | 阻止建任务弊大于利；现有 PLAN 阶段对执行类工具的限制部分覆盖了"绕过审批就执行"的风险（不严之处由 #20 跟踪） |
-| TaskCompleted | P1 | 下次重构迁移 | 比当前 TaskUpdate matcher 更精确（专为完成事件设计），需新测试 |
+| TaskCompleted | **已引入 (#24)** | 迁移完成 | 见上表"已覆盖"行。stage-guard.js 直接监听 TaskCompleted 事件；旧的 PreToolUse:TaskUpdate completed 检测已移除 |
 | CwdChanged | P3 | 不引入 | 当前架构不需要它的额外能力（CLAUDE_ENV_FILE 持久化 / watchPaths 更新 / direnv 触发）；CWD 漂移已由 find-root.js 主动定位解决 |
 | StopFailure | P1 | 加入 session-logger | API 错误当前完全不记录，可观测性显著改善 |
 | PostToolUseFailure: 反馈给 AI | P2 | 观察 | 当前 PostToolUseFailure 只记录到 session-log，未利用 hookSpecificOutput.additionalContext 把失败信息回填给 AI；可改善 AI 的纠错能力，但需要先验证记录方案足够 |

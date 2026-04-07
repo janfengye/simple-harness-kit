@@ -125,6 +125,9 @@ settings.json 必须至少包含以下 Hook 注册（必选 4 个）：
     ],
     "PostToolUseFailure": [
       { "hooks": [{ "type": "command", "command": "node scripts/hooks/session-logger.js" }] }
+    ],
+    "TaskCompleted": [
+      { "hooks": [{ "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }] }
     ]
   }
 }

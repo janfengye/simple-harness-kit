@@ -2,9 +2,11 @@
 'use strict';
 
 /**
- * Harness Stage Guard — 强制新 session 声明 Harness 阶段
- * @version 0.6.1
- * 触发: PreToolUse:*（挂在所有工具上：Bash, Edit, Write, Agent, Read, Grep, Glob, WebFetch, WebSearch, TaskUpdate）
+ * Harness Stage Guard — 强制新 session 声明 Harness 阶段 + 监听 TaskCompleted 提醒 VERIFY
+ * @version 0.6.3
+ * 触发:
+ *   - PreToolUse:*（Bash, Edit, Write, Agent, Read, Grep, Glob, WebFetch, WebSearch, TaskUpdate）
+ *   - TaskCompleted lifecycle event (v0.6.3 迁移自原 PreToolUse:TaskUpdate + status==completed 检测)
  *
  * 机制:
  * 1. 检查 .harness/current-stage.json 是否存在
@@ -283,6 +285,32 @@ process.stdin.on('end', () => {
   try {
     const input = JSON.parse(raw);
 
+    // ── TaskCompleted lifecycle event 特殊处理 ──
+    // TaskCompleted 是 Claude Code 为任务完成专设的 event，不是 tool call。
+    // 它没有 tool_name / tool_input，只有 hook_event_name + task_id + task_subject。
+    // 比旧的 PreToolUse:TaskUpdate matcher + status==completed 更精确，且覆盖 agent team
+    // 场景（teammate 完成 in-progress task 时也触发）。
+    if (input.hook_event_name === 'TaskCompleted') {
+      let currentStage = null;
+      try {
+        currentStage = JSON.parse(fs.readFileSync(STAGE_FILE, 'utf8')).stage;
+      } catch {}
+      if (['EXECUTE', 'VERIFY'].includes(currentStage)) {
+        const taskId = input.task_id || '';
+        const subject = input.task_subject || '';
+        const label = taskId ? `任务 #${taskId}` : '任务';
+        const subjectPart = subject ? ` — ${subject}` : '';
+        process.stderr.write(
+          `[Harness Stage Guard] 在 ${currentStage} 阶段标记 ${label}${subjectPart} 完成。\n` +
+          `→ 确认是否已完成 VERIFY 并产出验证证据？\n` +
+          `→ 如果任务尚未真正完成，撤回此状态变更。\n`
+        );
+      }
+      // TaskCompleted 是 observability-style event，不阻止
+      process.stdout.write(raw);
+      return;
+    }
+
     if (!fs.existsSync(STAGE_FILE)) {
       // Bootstrap 口：允许 Write current-stage.json，但仍要校验 since
       const writePath = String(input.tool_input?.file_path || '');
@@ -416,15 +444,10 @@ process.stdin.on('end', () => {
             `[Harness ON] 当前阶段: ${data.stage}` + (data.task ? ` — ${data.task}` : '') + '\n'
           );
 
-          // TaskUpdate(completed) 在 EXECUTE/VERIFY 阶段提醒确认 VERIFY
-          if (toolName === 'TaskUpdate') {
-            const taskStatus = String(input.tool_input?.status || '');
-            if (taskStatus === 'completed' && ['EXECUTE', 'VERIFY'].includes(data.stage)) {
-              process.stderr.write(
-                `[Harness Stage Guard] 在 ${data.stage} 阶段标记任务完成。确认是否已完成 VERIFY 并产出验证证据？\n`
-              );
-            }
-          }
+          // 注：原 TaskUpdate(completed) 提醒已迁移到 TaskCompleted lifecycle event 处理路径
+          // （见本文件顶部的 input.hook_event_name === 'TaskCompleted' 分支）。
+          // 这里保留 TaskUpdate 作为 TASK_TOOLS 成员（放行流程 + 跳过 first-call guard），
+          // 但不再在 PreToolUse:TaskUpdate 分支做 completed 检测，避免和 TaskCompleted 重复提醒。
 
           if (STAGE_DIRECTIVES[data.stage]) {
             process.stderr.write(STAGE_DIRECTIVES[data.stage]);

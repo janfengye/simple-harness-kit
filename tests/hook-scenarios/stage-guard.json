@@ -257,7 +257,7 @@
     }
   },
   {
-    "name": "stage-guard: EXECUTE + TaskUpdate(completed) → 放行 + 提醒",
+    "name": "stage-guard: EXECUTE + TaskUpdate(completed) → 放行（不再由 PreToolUse 提醒，迁到 TaskCompleted 事件）",
     "hook": "harness-stage-guard.js",
     "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
     "setup": {
@@ -266,35 +266,128 @@
     },
     "expect": {
       "exitCode": 0,
-      "stderr": ["在 EXECUTE 阶段标记任务完成", "VERIFY"],
+      "stderrNot": ["标记任务完成", "标记 任务"],
       "stdout": "passthrough"
     }
   },
   {
-    "name": "stage-guard: REVIEW + TaskUpdate(completed) → 放行无提醒",
+    "name": "stage-guard: TaskCompleted 事件 + EXECUTE → 提醒检查 VERIFY 证据",
     "hook": "harness-stage-guard.js",
-    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "42",
+      "task_subject": "迁移 TaskUpdate→TaskCompleted"
+    },
     "setup": {
-      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
       ".harness/tool-count.json": "{\"count\":1}"
     },
     "expect": {
       "exitCode": 0,
-      "stderrNot": ["在 REVIEW 阶段标记任务完成"],
+      "stderr": [
+        "在 EXECUTE 阶段标记 任务 #42",
+        "迁移 TaskUpdate→TaskCompleted",
+        "VERIFY"
+      ],
       "stdout": "passthrough"
     }
   },
   {
-    "name": "stage-guard: VERIFY + TaskUpdate(completed) → 放行 + 提醒",
+    "name": "stage-guard: TaskCompleted 事件 + VERIFY → 提醒",
     "hook": "harness-stage-guard.js",
-    "stdin": { "tool_name": "TaskUpdate", "tool_input": { "taskId": "1", "status": "completed" } },
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "24",
+      "task_subject": "test task"
+    },
     "setup": {
       ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
       ".harness/tool-count.json": "{\"count\":1}"
     },
     "expect": {
       "exitCode": 0,
-      "stderr": ["在 VERIFY 阶段标记任务完成", "VERIFY"],
+      "stderr": ["在 VERIFY 阶段标记 任务 #24", "VERIFY"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: TaskCompleted 事件 + REVIEW → 无提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "24",
+      "task_subject": "test"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"REVIEW\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["标记 任务"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: TaskCompleted 事件 + PLAN → 无提醒（PLAN 不触发 completed 提醒）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "24"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["标记 任务"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: TaskCompleted 事件 + 无 stage 文件 → 无提醒（不崩溃）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "24"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["标记 任务"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: TaskCompleted 事件 + 损坏的 stage 文件 → 无提醒（不崩溃）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "hook_event_name": "TaskCompleted",
+      "task_id": "24"
+    },
+    "setup": {
+      ".harness/current-stage.json": "not-valid-json-content{{{"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["标记 任务"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "stage-guard: TaskCompleted 事件 + 缺 task_id/task_subject + EXECUTE → 通用提醒",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "hook_event_name": "TaskCompleted"
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["在 EXECUTE 阶段标记 任务 完成", "VERIFY"],
+      "stderrNot": ["任务 #"],
       "stdout": "passthrough"
     }
   },

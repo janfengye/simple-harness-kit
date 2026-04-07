@@ -167,6 +167,14 @@
         "description": "记录失败工具调用到 session-log + observations"
       }
     ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+        ],
+        "description": "任务标记完成时提醒检查 VERIFY 证据（含 agent team 场景）"
+      }
+    ],
     "Stop": [
       {
         "hooks": [

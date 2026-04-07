@@ -24,13 +24,15 @@ Rules 和 CLAUDE.md 的内容在 session 开始时加载到上下文。随着对
 
 > 完整的工具 / 事件覆盖矩阵见 [15-hook-coverage-matrix.md](./15-hook-coverage-matrix.md)。本章只介绍核心类型。
 
-Claude Code 支持三种 Hook 触发点：
+Claude Code 支持多种 Hook 触发点，核心列表：
 
 | 触发点 | 时机 | 用途 |
 |--------|------|------|
 | **PreToolUse** | Agent 调用工具之前 | 拦截违规操作、检查前置条件、注入提醒 |
 | **PostToolUse** | Agent 调用工具之后（成功） | 验证产出、记录行为、触发后续检查 |
 | **PostToolUseFailure** | Agent 调用工具之后（失败） | 记录失败工具调用，避免遗漏黑匣子 |
+| **SessionStart** | 新 session 开始 | 重置陈旧 stage、输出入口 banner、注入 AI directive |
+| **TaskCompleted** | 任务被标记为 completed | 在 EXECUTE/VERIFY 阶段提醒检查验证证据（含 agent team 场景） |
 
 Hook 返回值：
 - `exit 0` — 放行
