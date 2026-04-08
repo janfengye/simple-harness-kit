@@ -1,0 +1,51 @@
+# Commit 标准
+
+## Co-Authored-By 格式
+
+**权威来源**: `simple-harness-kit/methodology/12-commit-standards.md`
+
+**标准格式**:
+
+```
+Co-Authored-By: Claude Code (claude-opus-4-6)
+```
+
+格式要点：
+- 工具名：`Claude Code` / `Codex CLI` / `Cursor` / `Windsurf` / `GitHub Copilot` / `OpenCode` 等（以 methodology/12 表格为准）
+- 模型 ID：在括号里，如 `claude-opus-4-6` / `claude-sonnet-4-6` / `gpt-5.3-codex`
+- **不要带 `<email>` 后缀**
+- **不要用 "Claude Opus 4.6 (1M context)" 这种产品描述性名称** — 工具名要用"用户实际使用的工具品牌"（Claude Code），不是模型的营销名
+
+## 历史教训
+
+系统默认 CLAUDE.md 模板给的是 `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`，**错的**。该模板与 harness 标准冲突。AI session 如果不显式引用 methodology/12，默认会用这个错误格式。
+
+本规则以 harness 标准为准，覆盖系统默认。所有 AI 辅助 commit 必须遵守。
+
+### 自动守门
+
+`scripts/hooks/commit-check.js` 在 `PreToolUse:Bash` 阶段做两层检查：
+1. `git commit` 的 message 必须有 `Co-Authored-By:` 字样（警告级）
+2. 如果有，必须匹配 `^Co-Authored-By:\s+(Claude Code|Codex CLI|Cursor|Windsurf|GitHub Copilot|OpenCode)\s+\([\w.\-]+\)\s*$`（警告级）
+
+警告级不阻塞，但 AI 看到警告应该立即修正。
+
+## 多 AI 工具协作
+
+一次 commit 涉及多个 AI 工具时，每个工具一行：
+
+```
+Co-Authored-By: Claude Code (claude-opus-4-6)
+Co-Authored-By: Codex CLI (gpt-5.3-codex)
+```
+
+## 纯人工 commit
+
+完全由人手动编写（没有任何 AI 辅助）的 commit 不需要 Co-Authored-By。
+
+## 其他 commit 规范
+
+- Conventional Commits 前缀：`feat:` / `fix:` / `refactor:` / `test:` / `docs:` / `chore:` / `perf:` / `ci:`
+- 主题行 ≤ 72 字符
+- 中文为主，技术术语保留英文
+- 完整规范见 `simple-harness-kit/methodology/12-commit-standards.md`

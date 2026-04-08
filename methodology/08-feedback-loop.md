@@ -68,9 +68,13 @@ F5: 派 Agent → 引用 ID，按规则修复
 3. 把具体对象抽象为类别（"登录按钮" → "所有可交互元素"）
 4. 同类问题归一条规则，不要一个实例一条
 
-## F4: 写入正确层级的文件
+## F4: 写入正确层级的文件（含 F4-sync 子步骤）
 
-全局规则写入 `docs/constraints.md`，用 ID 编号：
+**F4 分为 3 个子步骤**，F4.3 是 2026-04-08 VH-09 后加入的 "dogfooding feedback loop 最后一公里" 强制同步步骤：
+
+### F4.1: 写入本地
+
+全局规则写入项目本地 `docs/constraints.md`，用 ID 编号：
 
 ```markdown
 ## C-UI-03: 移动端触控区域
@@ -83,6 +87,38 @@ F5: 派 Agent → 引用 ID，按规则修复
 ```
 
 **先写规则，再派 Agent。** 规则是 single source of truth。
+
+### F4.2: 判断约束 scope
+
+新约束属于以下哪类？判断决定 F4.3 是否必须做。
+
+| Scope | 前缀 | 处理 |
+|---|---|---|
+| **项目特定** | `C-UI-*` / `C-API-*` / `C-DATA-*` / `C-PERF-*` / `C-SEC-*` / `C-ARCH-*` / 等 | 只写项目本地 `docs/constraints.md` |
+| **kit-level meta** | `C-DOC-*` / `C-META-*` / `C-HOOK-*` / `C-TEST-*` / `C-GATE-*` / `C-INIT-*` / `C-SKILL-*` | **F4.3 必须做**（kit 维护者场景） |
+
+VH-* 历史记录按同样规则：kit-level 约束的违反记录必须同步，项目特定约束的违反记录只留本地。
+
+### F4.3: 同步到 kit 产品仓库（C-META-04, VH-09 后强制）
+
+**仅适用于 kit 维护者 workspace**。kit 使用者（不是 kit 开发者）不需要执行 F4.3 —— 如果你发现了 kit-level 约束应该改，走 `methodology/13-self-maintenance.md` 的 "用户提 Issue" 流程即可。
+
+如果你是 kit 维护者（本仓库 = simple-harness-kit 的 dogfooding workspace），F4.2 判定为 kit-level 时**必须**在**同一 session 内**：
+
+1. 把新 C-ID 写入 `simple-harness-kit/docs/constraints.md`（除了 workspace `docs/constraints.md` 之外，两份都要）
+2. 如果涉及新 rule 文件（`.claude/rules/*.md`）→ 同步到 `simple-harness-kit/templates/rules/*.md.tmpl`
+3. 跑 `node simple-harness-kit/tests/run.js`，确保 `T10 sync: workspace ↔ kit docs/constraints.md` 和 `T11 sync: workspace ↔ kit templates/rules` PASS
+4. 在同一 commit 中包含两份文件的变更，防止 "打算下次同步" 的漂移
+
+**反模式**：只写 workspace，想着"下次 release 统一同步" — 这**正是** VH-09 的根因，**禁止**。
+
+### 为什么 F4.3 存在（VH-09 教训）
+
+2026-04-08 session 中本项目产出了 6 条新 kit-level 约束（C-INIT-04 / C-GATE-04/05/05a/06 / C-HOOK-06）和 VH-01..VH-08，但**全部只写入 workspace**，kit 产品仓库的 `docs/constraints.md` 长期滞后。60+ 使用者上周开始用 v0.7.0，clone 仓库时拿到的 meta 约束是残缺的。
+
+根因是方法论完整、工具不完整：F1-F5 只说"写入 docs/constraints.md"，没说"如果是 kit-level 约束必须同步到 kit 仓库"。`release-process.md` 也没在 Step 0 检查此同步。一次偶然 dogfooding 疏忽就导致长期漂移。
+
+F4.3 + template-integrity T10/T11 + release-process Step 0 三个补丁共同闭合这个 gap。
 
 ### VH 记录更新
 

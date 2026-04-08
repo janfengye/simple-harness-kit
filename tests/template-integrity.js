@@ -26,6 +26,11 @@ const SCRIPTS_HOOKS_DIR = path.join(KIT_ROOT, 'scripts', 'hooks');
 const INIT_PROMPT = path.join(KIT_ROOT, 'init-prompt.md');
 const REQUIRED_WIRING_FILE = path.join(__dirname, 'required-wiring.json');
 const HARNESS_INIT_SKILL = path.join(KIT_ROOT, 'skills', 'harness-init', 'SKILL.md');
+const KIT_CONSTRAINTS = path.join(KIT_ROOT, 'docs', 'constraints.md');
+// Workspace constraints 位于 kit 的父目录 (ths-harness/docs/constraints.md)
+// 注意: T10 只有在 workspace 存在时才运行 (kit 独立 clone 时 workspace 不存在)
+const WORKSPACE_CONSTRAINTS = path.resolve(KIT_ROOT, '..', 'docs', 'constraints.md');
+const WORKSPACE_RULES_DIR = path.resolve(KIT_ROOT, '..', '.claude', 'rules');
 
 // 每个 rule 模板的关键内容锚点。
 // 原则：每个模板至少 4 个锚点，覆盖核心行为点（不是单个 banner 词），
@@ -419,6 +424,117 @@ function runTemplateIntegrityTests() {
     const missingTask = requiredTaskMatchers.filter(t => !taskTools.includes(t));
     if (missingTask.length > 0) {
       return `TASK_TOOLS 缺少 required-wiring 中的 task matcher: ${missingTask.join(', ')}`;
+    }
+  });
+
+  // ── T10: workspace vs kit constraints.md meta 约束同步检测 (C-META-04) ──
+  // VH-09 治理: kit 产品仓库 docs/constraints.md 和 workspace ths-harness/docs/constraints.md
+  // 必须保持 "所有 kit-level meta 约束和 VH 历史同步". workspace 有的 kit-level C-* 和 VH-*,
+  // kit 仓库必须都有 (kit 仓库可以额外有, 但不能少).
+  //
+  // kit-level 判据: 约束 ID 以这些前缀开头 → C-DOC / C-META / C-HOOK / C-TEST / C-GATE / C-INIT / C-SKILL
+  //   (area-level 约束如 C-UI/C-API 是项目特定的, 不要求同步)
+  //
+  // 如果 workspace 不存在 (e.g. kit 被独立 clone), 此检查跳过.
+  check('sync: workspace ↔ kit docs/constraints.md meta 约束同步 (C-META-04)', () => {
+    if (!fs.existsSync(KIT_CONSTRAINTS)) {
+      return `kit 仓库 constraints 不存在: ${KIT_CONSTRAINTS}`;
+    }
+    if (!fs.existsSync(WORKSPACE_CONSTRAINTS)) {
+      // kit 独立 clone 场景, 没有 workspace - 视为 N/A (PASS)
+      return null;
+    }
+
+    const kitContent = fs.readFileSync(KIT_CONSTRAINTS, 'utf8');
+    const wsContent = fs.readFileSync(WORKSPACE_CONSTRAINTS, 'utf8');
+
+    // 提取 C-{area}-{number} (含 5a / 06 等字母后缀扩展)
+    const extractConstraintIds = (content) => {
+      const re = /\|\s*(C-[A-Z]+-\d+[a-z]?)\s*\|/g;
+      const ids = new Set();
+      let m;
+      while ((m = re.exec(content)) !== null) ids.add(m[1]);
+      return ids;
+    };
+
+    // kit-level 前缀: 约束属于 kit 方法论本身而非项目特定
+    const KIT_LEVEL_PREFIXES = ['C-DOC', 'C-META', 'C-HOOK', 'C-TEST', 'C-GATE', 'C-INIT', 'C-SKILL'];
+    const isKitLevel = (id) => KIT_LEVEL_PREFIXES.some(p => id.startsWith(p));
+
+    const wsIds = extractConstraintIds(wsContent);
+    const kitIds = extractConstraintIds(kitContent);
+
+    // workspace 的 kit-level C-*, kit 必须都有
+    const missingInKit = [];
+    for (const id of wsIds) {
+      if (isKitLevel(id) && !kitIds.has(id)) {
+        missingInKit.push(id);
+      }
+    }
+
+    // 提取 VH-{number} (或 VH-01/VH-02...)
+    const extractVHIds = (content) => {
+      const re = /\|\s*(VH-\d+)\s*\|/g;
+      const ids = new Set();
+      let m;
+      while ((m = re.exec(content)) !== null) ids.add(m[1]);
+      return ids;
+    };
+
+    const wsVHs = extractVHIds(wsContent);
+    const kitVHs = extractVHIds(kitContent);
+    const missingVHInKit = [];
+    for (const vh of wsVHs) {
+      if (!kitVHs.has(vh)) missingVHInKit.push(vh);
+    }
+
+    const errors = [];
+    if (missingInKit.length > 0) {
+      errors.push(`kit 仓库 docs/constraints.md 缺少 workspace 中的 kit-level 约束: ${missingInKit.join(', ')}`);
+    }
+    if (missingVHInKit.length > 0) {
+      errors.push(`kit 仓库 docs/constraints.md 缺少 workspace 中的 VH: ${missingVHInKit.join(', ')}`);
+    }
+    if (errors.length > 0) return errors.join(' | ');
+  });
+
+  // ── T11: workspace vs kit templates/rules 同步检测 (C-META-04) ──
+  // workspace 的 .claude/rules/*.md 里的自定义 rule 应该有对应的 kit templates/rules/*.md.tmpl
+  // (例如 workspace 的 commit-standards.md → kit templates/rules/commit-standards.md.tmpl)
+  // 这是 C-META-04 对 rules 层的延伸.
+  //
+  // 注意: 不是所有 workspace rules 都需要 template (有些是纯本地配置). 此检查只要求: 如果
+  // workspace 的 rule 名字匹配 kit 现有 template 的前缀 (role-constraints / qa-standards /
+  // feedback-workflow / harness-entry / commit-standards), 那 kit template 必须存在.
+  check('sync: workspace ↔ kit templates/rules 同步 (C-META-04)', () => {
+    if (!fs.existsSync(WORKSPACE_RULES_DIR)) {
+      // kit 独立 clone 场景 - N/A
+      return null;
+    }
+    if (!fs.existsSync(TMPL_RULES_DIR)) {
+      return `kit templates/rules 目录不存在: ${TMPL_RULES_DIR}`;
+    }
+
+    const SYNC_REQUIRED_RULES = [
+      'role-constraints',
+      'qa-standards',
+      'feedback-workflow',
+      'harness-entry',
+      'commit-standards',
+    ];
+
+    const wsFiles = fs.readdirSync(WORKSPACE_RULES_DIR).filter(f => f.endsWith('.md'));
+    const missing = [];
+    for (const ruleName of SYNC_REQUIRED_RULES) {
+      const wsFile = `${ruleName}.md`;
+      const tmplFile = `${ruleName}.md.tmpl`;
+      if (wsFiles.includes(wsFile) && !fs.existsSync(path.join(TMPL_RULES_DIR, tmplFile))) {
+        missing.push(`workspace 有 ${wsFile} 但 kit 缺 ${tmplFile}`);
+      }
+    }
+
+    if (missing.length > 0) {
+      return missing.join(' | ');
     }
   });
 

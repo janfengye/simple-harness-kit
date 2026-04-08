@@ -29,8 +29,37 @@
 
 ## F4: 写入正确层级的文件
 
-- 全局规则 → docs/constraints.md（用 `C-{area}-{number}` 编号）
+分为 3 个子步骤 — **F4.1 写入** + **F4.2 判断 scope** + **F4.3 同步** (kit 维护者场景下必做)。任一子步骤不可跳过。
+
+### F4.1: 写入项目本地
+
+- 全局规则 → `docs/constraints.md`（用 `C-{area}-{number}` 编号）
 - **先写规则，再派 Agent。不是反过来。**
+
+### F4.2: 判断约束 scope
+
+新约束属于以下哪类？
+
+| Scope | 前缀 | 处理 |
+|---|---|---|
+| **项目特定** | `C-UI-*` / `C-API-*` / `C-DATA-*` / `C-PERF-*` / `C-SEC-*` / `C-ARCH-*` / 等 | 只写项目本地 `docs/constraints.md` 即可 |
+| **kit-level meta** | `C-DOC-*` / `C-META-*` / `C-HOOK-*` / `C-TEST-*` / `C-GATE-*` / `C-INIT-*` / `C-SKILL-*` | **F4.3 必须做**（如果本项目是 kit 维护者 workspace；否则视为"向 kit 上游贡献" 入队为 issue） |
+
+VH-* 历史记录也按这个规则：如果违反的是 kit-level 约束，VH 必须同步；否则只留项目本地。
+
+### F4.3: 同步到 kit 产品仓库 (C-META-04，仅 kit 维护者场景)
+
+**仅适用于 kit 维护者**（即本项目的 workspace 同时也是 simple-harness-kit 的 dogfooding repo）。普通使用者不需要执行 F4.3。
+
+如果 F4.2 判定为 kit-level 且本项目是 kit 维护 workspace，**必须**在同一 session 内同步到：
+
+1. `simple-harness-kit/docs/constraints.md` — 新增对应 C-ID 和/或 VH
+2. 如果涉及新 rule 文件 → 同步到 `simple-harness-kit/templates/rules/*.md.tmpl`
+3. 跑 `node simple-harness-kit/tests/run.js`，T10/T11 必须 PASS
+
+**反模式**: 只写 workspace，打算"下次 release 时再同步" — 这是 VH-09 的根因，**禁止**。
+
+**自动守门**: `tests/template-integrity.js` T10/T11 检测本子步骤。任何时间跑 `node tests/run.js`，如果 workspace 和 kit 不同步立即 FAIL。
 
 ## F5: 派 Agent 按规则修复
 
