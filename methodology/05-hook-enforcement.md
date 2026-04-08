@@ -34,6 +34,7 @@ Claude Code 支持多种 Hook 触发点，核心列表：
 | **SessionStart** | 新 session 开始 | 重置陈旧 stage、输出入口 banner、注入 AI directive |
 | **TaskCompleted** | 任务被标记为 completed | 在 EXECUTE/VERIFY 阶段提醒检查验证证据（含 agent team 场景） |
 | **StopFailure** | API 错误结束（rate_limit 等） | 记录到 session-log/observations，下次 session 知道上次怎么挂的 |
+| **SessionEnd** | session 结束（clear/logout 等） | 归档 observations.jsonl + 写结束标记 |
 
 Hook 返回值：
 - `exit 0` — 放行

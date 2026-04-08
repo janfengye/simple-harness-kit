@@ -176,6 +176,36 @@ for f in scripts/hooks/*.js; do
   fi
 done
 
+# ── E2. 所有 wiring 引用的 hook 脚本必须以文件形式存在 ──
+# 反 VH-08-同类回归: settings.json 已注册了 wiring，但 AI 漏复制 hook 脚本，
+# 导致 Claude Code 启动时报 MODULE_NOT_FOUND。E. 只对"已存在的脚本"做语法检查，
+# 无法 catch 这种"注册了但文件没复制"的缺陷。
+section "E2. wiring 引用的 hook 脚本文件必须存在"
+
+if [ -f .claude/settings.json ]; then
+  # 从 required-wiring.json 派生需要存在的脚本集合（绝对真实源，不再硬编码）
+  REQUIRED_SCRIPTS=$(node -e "
+const w = JSON.parse(require('fs').readFileSync('$REQUIRED_WIRING_JSON','utf8')).wirings;
+console.log([...new Set(w.map(x => x.script))].join(' '));
+" 2>/dev/null)
+
+  for script_name in $REQUIRED_SCRIPTS; do
+    # 在被测项目目录搜索脚本（可能在 scripts/hooks/ 或 .claude/hooks/ 等）
+    found=""
+    for cand in "scripts/hooks/$script_name" ".claude/hooks/$script_name" "hooks/$script_name"; do
+      if [ -f "$cand" ]; then
+        found="$cand"
+        break
+      fi
+    done
+    if [ -n "$found" ]; then
+      ok "wired script exists: $script_name → $found"
+    else
+      fail "wired script missing on disk: $script_name (settings 已注册但文件未复制)"
+    fi
+  done
+fi
+
 # ── F. Hook 实弹: stage-guard 拦截 PLAN+Bash ──
 section "F. Hook 实弹测试"
 

@@ -28,6 +28,13 @@
  *         "contains": ["关键词 A", "关键词 B"],
  *         "containsNot": ["禁词 X"]
  *       }
+ *     },
+ *     "dirs": {                            // 可选：检查目录中是否存在符合命名的文件
+ *       ".harness/observations.archive": {
+ *         "matches": "^observations-[a-z0-9]+-.*\\.jsonl$",  // 文件名正则
+ *         "minCount": 1,                                       // 至少匹配数
+ *         "contains": ["tool"]                                 // 至少一个匹配文件需包含所有 needles
+ *       }
  *     }
  *   }
  * }
@@ -177,6 +184,49 @@ function runScenario(scenario) {
     if (expect.stdout === 'passthrough') {
       if (stdout.trim() !== stdinData.trim()) {
         errors.push('stdout 未透传 stdin');
+      }
+    }
+
+    // 检查目录中匹配文件名的项（用于 archive 等动态文件名场景）
+    if (expect.dirs) {
+      for (const [dirPath, check] of Object.entries(expect.dirs)) {
+        const fullDir = path.join(tmpDir, dirPath);
+        if (!fs.existsSync(fullDir)) {
+          if (check.exists !== false) errors.push(`目录不存在: ${dirPath}`);
+          continue;
+        }
+        if (check.exists === false) {
+          errors.push(`目录不应存在: ${dirPath}`);
+          continue;
+        }
+        let entries;
+        try {
+          entries = fs.readdirSync(fullDir);
+        } catch (e) {
+          errors.push(`无法读取目录 ${dirPath}: ${e.message}`);
+          continue;
+        }
+        let matched = entries;
+        if (check.matches) {
+          const re = new RegExp(check.matches);
+          matched = entries.filter(e => re.test(e));
+        }
+        const minCount = check.minCount !== undefined ? check.minCount : 1;
+        if (matched.length < minCount) {
+          errors.push(`目录 ${dirPath} 匹配 ${check.matches || '*'} 数量 ${matched.length} < ${minCount}`);
+        }
+        if (check.contains !== undefined && matched.length > 0) {
+          const needles = Array.isArray(check.contains) ? check.contains : [check.contains];
+          const ok = matched.some(name => {
+            try {
+              const c = fs.readFileSync(path.join(fullDir, name), 'utf8');
+              return needles.every(n => c.includes(n));
+            } catch { return false; }
+          });
+          if (!ok) {
+            errors.push(`目录 ${dirPath} 中没有匹配文件包含 ${JSON.stringify(needles)}`);
+          }
+        }
       }
     }
 

@@ -25,6 +25,7 @@ const TMPL_RULES_DIR = path.join(KIT_ROOT, 'templates', 'rules');
 const SCRIPTS_HOOKS_DIR = path.join(KIT_ROOT, 'scripts', 'hooks');
 const INIT_PROMPT = path.join(KIT_ROOT, 'init-prompt.md');
 const REQUIRED_WIRING_FILE = path.join(__dirname, 'required-wiring.json');
+const HARNESS_INIT_SKILL = path.join(KIT_ROOT, 'skills', 'harness-init', 'SKILL.md');
 
 // 每个 rule 模板的关键内容锚点。
 // 原则：每个模板至少 4 个锚点，覆盖核心行为点（不是单个 banner 词），
@@ -309,6 +310,55 @@ function runTemplateIntegrityTests() {
     }
     if (hardcodedTriples.length > 0) {
       return '.sh 脚本含硬编码 wiring 三元组 (应从 JSON 派生):\n      ' + hardcodedTriples.join('\n      ');
+    }
+  });
+
+  // ── T8: skills/harness-init/SKILL.md 强制读取真实源 (C-INIT-04 守门) ──
+  // 反 VH-08 回归：保证 SKILL.md 强制要求 AI 读 templates/settings-json.tmpl 和 init-prompt.md，
+  // 而不是让 AI 凭记忆生成 settings.json。
+  // 同时禁止 SKILL.md 复述真实源（硬编码必选清单/wiring）。
+  check('skill: harness-init/SKILL.md 强制读真实源 + 不复述清单 (C-INIT-04)', () => {
+    if (!fs.existsSync(HARNESS_INIT_SKILL)) return `文件不存在: ${HARNESS_INIT_SKILL}`;
+    const content = fs.readFileSync(HARNESS_INIT_SKILL, 'utf8');
+
+    // (a) 必须显式提到要读取 init-prompt.md
+    if (!/init-prompt\.md/.test(content)) {
+      return 'SKILL.md 未引用 init-prompt.md (违反 C-INIT-04)';
+    }
+
+    // (b) 必须显式提到要读取 templates/settings-json.tmpl
+    if (!/templates\/settings-json\.tmpl/.test(content)) {
+      return 'SKILL.md 未引用 templates/settings-json.tmpl (违反 C-INIT-04)';
+    }
+
+    // (c) 必须显式提到要读取 required-wiring.json
+    if (!/required-wiring\.json/.test(content)) {
+      return 'SKILL.md 未引用 required-wiring.json (违反 C-INIT-04)';
+    }
+
+    // (d) 必须有"凭记忆生成"的禁令关键字
+    if (!/凭记忆/.test(content)) {
+      return 'SKILL.md 缺少"凭记忆"禁令关键字 (违反 C-INIT-04 的反退化要求)';
+    }
+
+    // (e) 不得复述硬编码的 settings.json 代码块
+    //    检测：是否有 ```json ... "hooks": ...``` 这种内嵌完整 settings 结构
+    const jsonBlocks = content.match(/```json[\s\S]*?```/g) || [];
+    for (const block of jsonBlocks) {
+      if (/"hooks"\s*:/.test(block) && /"PreToolUse"\s*:/.test(block)) {
+        return 'SKILL.md 内嵌了完整的 settings.json 代码块 (违反 C-INIT-04 不复述真实源原则，应改为指针)';
+      }
+    }
+
+    // (f) 不得硬编码必选 hook 文件清单 (典型形态: 多个 scripts/hooks/xxx.js 紧邻列出)
+    //     启发式：若文件包含 ≥4 个 "scripts/hooks/*.js" 引用且都在同一段落（30 行内），算复述清单
+    const hookRefs = [...content.matchAll(/scripts\/hooks\/[\w-]+\.js/g)];
+    if (hookRefs.length >= 4) {
+      const positions = hookRefs.map(m => content.substring(0, m.index).split('\n').length);
+      const span = Math.max(...positions) - Math.min(...positions);
+      if (span <= 30) {
+        return `SKILL.md 在 ${span} 行内列出 ${hookRefs.length} 个 hook 路径，疑似硬编码必选清单 (违反 C-INIT-04)`;
+      }
     }
   });
 

@@ -1,0 +1,146 @@
+[
+  {
+    "name": "session-end: SessionEnd (clear) + 存在 observations → 归档 + 写结束标记",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "SessionEnd",
+      "source": "clear",
+      "session_id": "abc12345"
+    },
+    "setup": {
+      ".harness/observations.jsonl": "{\"t\":\"2026-04-07T10:00:00Z\",\"tool\":\"Bash\",\"sentinel\":\"OBS_MARKER_42\"}\n{\"t\":\"2026-04-07T10:01:00Z\",\"tool\":\"Edit\"}\n"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/observations.jsonl": { "exists": false },
+        ".harness/session-log.md": {
+          "contains": [
+            "Session 结束",
+            "source**: clear",
+            "session**: abc12345"
+          ]
+        }
+      },
+      "dirs": {
+        ".harness/observations.archive": {
+          "matches": "^observations-abc12345-.*\\.jsonl$",
+          "minCount": 1,
+          "contains": ["OBS_MARKER_42", "Edit"]
+        }
+      }
+    }
+  },
+  {
+    "name": "session-end: SessionEnd + session-log.md 已存在 → append 而非覆盖",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "SessionEnd",
+      "source": "clear",
+      "session_id": "sid-append"
+    },
+    "setup": {
+      ".harness/session-log.md": "# Harness Session Log\n\n## 元信息\n- 开始时间: 2026-04-07T09:00\n- 工具: Claude Code\n\n---\n\n## 事件记录\n\n### [09:30] PRE_EXISTING_LINE_KEEP_ME\n- 已有内容\n\n"
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": {
+          "contains": [
+            "PRE_EXISTING_LINE_KEEP_ME",
+            "已有内容",
+            "Session 结束",
+            "session**: sid-append"
+          ],
+          "containsNot": [
+            "开始时间: 2026-04-07T11"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "session-end: SessionEnd + 无 observations → 不崩溃，仍写结束标记",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "SessionEnd",
+      "source": "logout",
+      "session_id": "xyz"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "contains": "logout" },
+        ".harness/observations.jsonl": { "exists": false }
+      }
+    }
+  },
+  {
+    "name": "session-end: SessionEnd + HARNESS_LOG=off → 不做任何事",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "SessionEnd",
+      "source": "clear",
+      "session_id": "sid"
+    },
+    "env": { "HARNESS_LOG": "off" },
+    "setup": {
+      ".harness/observations.jsonl": "{\"t\":\"x\",\"tool\":\"Bash\"}\n"
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "exists": false },
+        ".harness/observations.jsonl": { "contains": "tool" }
+      }
+    }
+  },
+  {
+    "name": "session-end: 非 SessionEnd 事件 → 透传不做事",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "PostToolUse",
+      "tool_name": "Bash"
+    },
+    "setup": {
+      ".harness/observations.jsonl": "{\"tool\":\"Bash\"}\n"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough",
+      "files": {
+        ".harness/observations.jsonl": { "contains": "tool" },
+        ".harness/session-log.md": { "exists": false }
+      }
+    }
+  },
+  {
+    "name": "session-end: 无效 JSON → 不崩溃",
+    "hook": "session-end.js",
+    "stdin": null,
+    "expect": {
+      "exitCode": 0
+    }
+  },
+  {
+    "name": "session-end: 缺 source 字段 → fallback 'other'",
+    "hook": "session-end.js",
+    "stdin": {
+      "hook_event_name": "SessionEnd",
+      "session_id": "sid-no-source"
+    },
+    "setup": {
+      ".harness/.gitkeep": ""
+    },
+    "expect": {
+      "exitCode": 0,
+      "files": {
+        ".harness/session-log.md": { "contains": "source**: other" }
+      }
+    }
+  }
+]

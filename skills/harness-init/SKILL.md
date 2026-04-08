@@ -5,7 +5,7 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 
 # Harness Init
 
-一键为当前项目生成完整的 Harness Engineering 配置。
+为当前项目生成完整的 Harness Engineering 配置。
 
 ## 何时使用
 
@@ -13,114 +13,80 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 - 已有项目，需要加装约束和 QA 体系
 - 用户说"初始化 harness"或"搭建开发流程"
 
+---
+
+## 生成原则（不可违反，违反即视为 bug）
+
+> 历史教训 VH-08（2026-04-08）：本 skill 的旧版本只画了文件树和必选清单，没有要求 AI 读取真实源。AI 走到这里时凭训练记忆拼 `.claude/settings.json`，结果生成了 Claude Code 不认识的 key 结构（`Invalid key in record`），用户重启 session 即报错。同一个失败模式在 templates ⇌ required-wiring.json 这一对上已经被 #16 / #23 修复过，但当时没意识到 SKILL.md 也是一份会"凭记忆生成"的入口。
+
+约束 **C-INIT-04**：
+
+1. **`.claude/settings.json` 不能凭记忆生成**。必须先读取 `simple-harness-kit/templates/settings-json.tmpl`，以模板为唯一真实源，再做项目定制（替换路径、可选 hook 增删）。
+2. **Hook 脚本不能凭记忆生成**。必须从 `simple-harness-kit/scripts/hooks/` 读取对应脚本，复制到目标项目，**不修改脚本内容**——它们是 kit 的一部分，会随升级更新。如目标项目用 monorepo，复制策略由项目结构决定，但脚本本体保持不变。
+3. **Rules 文件不能凭记忆生成**。必须从 `simple-harness-kit/templates/rules/` 下的 `*.tmpl` 派生，做项目占位符替换。
+4. **必选/可选组件清单以 `simple-harness-kit/init-prompt.md` 为权威**。本文件不复述清单——任何看到必选项变化的人，都必须改 init-prompt.md，而不是改这里。
+5. **wiring（hook event/matcher 注册）以 `simple-harness-kit/tests/required-wiring.json` 为权威**。这是工程层的 single source of truth，validate.sh 和 template-integrity 都从它派生。
+6. **生成完毕后必须运行 `simple-harness-kit/tests/e2e-acceptance-validate.sh`**，把完整输出贴到对话里。任何 FAIL 项必须修复后再宣称 init 完成。
+
+任何"为了简化/适配/AI 觉得这样更好"而违反以上 6 条的行为，都是 bug，不是优化。
+
+---
+
 ## 执行流程
 
-### Step 1: 自动扫描项目信息
+### Step 1: 读取真实源
 
-从项目文件中自动提取（不要求用户手动提供）：
-- package.json / pyproject.toml / go.mod → 技术栈、构建命令、测试命令
-- 目录结构 → 源码目录
-- 已有 CLAUDE.md → 项目描述
-- 已有 .claude/ → 需要合并而非覆盖
+依次 Read 以下文件，作为本次 init 的全部依据：
 
-如果关键信息扫不到，才向用户确认。
+1. `simple-harness-kit/init-prompt.md` —— 流程总纲、必选/可选组件清单、定制说明
+2. `simple-harness-kit/templates/settings-json.tmpl` —— settings.json 唯一真实源
+3. `simple-harness-kit/tests/required-wiring.json` —— hook wiring 唯一真实源
+4. `simple-harness-kit/methodology/15-hook-coverage-matrix.md` —— hook 覆盖矩阵，理解每个 wiring 的来由
 
-### Step 2: 生成必选组件（不可跳过）
+不要跳过这一步。不要"我已经知道大概结构"。
 
-```
-.claude/
-├── rules/
-│   ├── role-constraints.md      # 角色约束
-│   ├── qa-standards.md          # QA 量化标准
-│   ├── feedback-workflow.md     # F1-F5 反馈流程
-│   └── harness-entry.md         # 新 session 入口规则
-├── settings.json                # Hooks 配置（至少注册 4 个必选 Hook）
+### Step 2: 自动扫描项目信息
 
-scripts/hooks/
-├── harness-stage-guard.js       # 阶段声明强制（必选）
-├── harness-session-start.js     # session 初始化 + banner（必选）
-├── session-logger.js            # 全过程记录（必选）
-└── safety-guard.js              # 安全防护（必选）
+按 init-prompt.md 描述的方式扫描：`package.json` / `pyproject.toml` / `go.mod` / 目录结构 / 已有 `CLAUDE.md` / 已有 `.claude/`。
 
-docs/
-└── constraints.md               # 初始约束模板
+### Step 3: 按 init-prompt.md 生成产物
 
-CLAUDE.md                        # 项目级指令
-.harness/                        # 运行时目录（自动创建）
+完全遵循 init-prompt.md 的"必选 / 可选 / 定制"段落。`.claude/settings.json` 必须从 `templates/settings-json.tmpl` 派生（**不是从记忆里写**）。
+
+### Step 4: 运行可执行守门
+
+```bash
+bash simple-harness-kit/tests/e2e-acceptance-validate.sh
 ```
 
-### Step 3: 按需生成可选组件
+把完整输出（含每行 ✓ / ✗）贴到对话。任何 FAIL 项立刻修复后重新跑。
 
-根据项目特点选配，跳过时记录理由：
+### Step 5: 输出 init-prompt.md 中定义的完整性检查清单
 
-| 组件 | 何时生成 |
-|------|---------|
-| agent-check.js | 会派 Agent 做子任务 |
-| verification-gate.js | 有测试框架 |
-| delivery-review.js | 有交付物文件 |
-| commit-check.js | 团队需要统计 AI 辅助占比 |
-| context-monitor.js | 长 session 场景 |
-| harness-learn.js | 想积累行为数据 |
-| agent-dispatch.md | 会用 Agent tool |
-| AGENTS.md | 同时用 Codex/Cursor |
+清单以 init-prompt.md 中的 "C-INIT-03" 段为准。本文件不复述清单。
 
-### Step 4: 定制化
-
-根据项目信息替换模板中的变量：
-- 构建/测试/lint 命令
-- 源码目录路径
-- 交付物文件类型
-- 角色约束范围
-
-### Step 5: 完整性检查（C-INIT-03，不可跳过）
-
-输出检查清单，逐项确认必选组件存在：
-
-```
-Harness Init 完整性检查
-========================
-必选组件:
-  [OK/MISSING] .claude/settings.json
-  [OK/MISSING] .claude/rules/role-constraints.md
-  [OK/MISSING] .claude/rules/qa-standards.md
-  [OK/MISSING] .claude/rules/feedback-workflow.md
-  [OK/MISSING] .claude/rules/harness-entry.md
-  [OK/MISSING] scripts/hooks/harness-stage-guard.js
-  [OK/MISSING] scripts/hooks/harness-session-start.js
-  [OK/MISSING] scripts/hooks/session-logger.js
-  [OK/MISSING] scripts/hooks/safety-guard.js
-  [OK/MISSING] docs/constraints.md
-  [OK/MISSING] CLAUDE.md
-
-可选组件（已生成）: [列出]
-可选组件（已跳过）: [列出 + 理由]
-
-settings.json Hook 注册数: N 个
-
-下一步:
-1. 开一个新 session（当前 session 的 Hook 不会生效）
-2. 新 session 中验证 banner 输出
-3. 故意触发一次违规操作，验证 Hook 拦截
-```
-
-任何必选组件 MISSING 必须修复后再结束。
+---
 
 ## 注意事项
 
-- 不覆盖已有的 CLAUDE.md 或 settings.json，而是合并
-- constraints.md 初始为空模板，随项目迭代逐步填充
+- 不覆盖已有的 `CLAUDE.md` 或 `.claude/settings.json`，而是合并
+- `docs/constraints.md` 初始为空模板，随项目迭代逐步填充
 - Hook 脚本需要 Node.js 环境
-- Hook 配置写入后当前 session 不生效，必须新 session
+- Hook 配置写入后**当前 session 不生效，必须新 session**
+
+## Codex 用户
+
+按 init-prompt.md 中"Codex 用户注意"段执行（必须 `--full-auto`）。
 
 ## Attribution
 
-如果项目已有 README.md，默认在底部追加一行：
+如果项目已有 `README.md`，默认在底部追加：
 
 ```markdown
 ---
 Harnessed by [Simple Harness Kit](https://github.com/duoglas/simple-harness-kit)
 ```
 
-- 如果 README 已有此标注，不重复添加
-- 如果项目没有 README.md，不创建
-- `HARNESS_ATTRIBUTION=off` 跳过此步骤
+- 已有此标注则不重复
+- 没有 README 不创建
+- `HARNESS_ATTRIBUTION=off` 跳过

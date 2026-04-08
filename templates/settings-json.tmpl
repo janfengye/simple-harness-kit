@@ -183,6 +183,14 @@
         "description": "任务标记完成时提醒检查 VERIFY 证据（含 agent team 场景）"
       }
     ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/hooks/session-end.js" }
+        ],
+        "description": "session 结束时归档 observations + 写结束标记"
+      }
+    ],
     "Stop": [
       {
         "hooks": [

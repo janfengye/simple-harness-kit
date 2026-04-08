@@ -85,6 +85,7 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | PostToolUseFailure | ✓ | ✓ | ✓ | session-logger | 失败工具调用记录（v0.6.2 加入） |
 | TaskCompleted | ✓ | ✓ | ✓ | harness-stage-guard.js | 任务标记完成时在 EXECUTE/VERIFY 提醒检查证据（v0.6.3 迁移自 TaskUpdate matcher） |
 | StopFailure | ✓ | ✓ | ✓ | session-logger.js | API 错误结束（rate_limit / billing / server_error 等）记录到 session-log + observations（v0.6.3 加入 #25） |
+| SessionEnd | ✓ | ✓ | ✓ | session-end.js | session 结束时归档 observations.jsonl + 写结束标记（v0.6.3 加入 #26） |
 | Stop | ✓ | ✓ | — | delivery-gate.js | 交付前拦截 EXECUTE（总是阻止）和 VERIFY（无证据时阻止） |
 
 **init-prompt.md 为什么没有 Stop**: init-prompt 的 settings.json 示例明确定位为"最小配置"（见其第 89-91 行）。delivery-gate 是可选的交付守门，用户可根据需要追加，不属于最小集。不算漂移。
@@ -99,7 +100,7 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | StopFailure | **已引入 (#25)** | 加入 session-logger 完成 | 见上表"已覆盖"行。session-logger.js 监听 StopFailure 事件，记录 error_type 到 session-log + observations |
 | PostToolUseFailure: 反馈给 AI | P2 | 观察 | 当前 PostToolUseFailure 只记录到 session-log，未利用 hookSpecificOutput.additionalContext 把失败信息回填给 AI；可改善 AI 的纠错能力，但需要先验证记录方案足够 |
 | PreCompact / PostCompact | P2 | 观察 | 当前无 compact 相关痛点 |
-| SessionEnd | P1 | 新增 session-end.js | 自动归档 observations + 触发 harness-learn 分析 |
+| SessionEnd | **已引入 (#26)** | 新增 session-end.js 完成 | 见上表"已覆盖"行。归档 observations 已实现；自动触发 harness-learn 暂未实现（避免阻塞退出，保留手动 --periodic 模式） |
 | ConfigChange | P2 | 观察 | 单人项目用例不明，团队场景再考虑 |
 
 详细评估见 [`docs/decisions/2026-04-07-lifecycle-events-evaluation.md`](../docs/decisions/2026-04-07-lifecycle-events-evaluation.md)（#17 任务输出）。
