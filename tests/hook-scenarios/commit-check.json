@@ -36,5 +36,70 @@
       "exitCode": 0,
       "stdout": "passthrough"
     }
+  },
+  {
+    "name": "commit-check: Co-Authored-By 带 email 后缀 (系统默认错误格式) → 格式警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Co-Authored-By 格式不符合", "Claude Code (claude-opus-4-6)"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: Co-Authored-By 工具名错误 (产品名不是工具名) → 格式警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Claude Opus 4.6 (claude-opus-4-6)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Co-Authored-By 格式不符合"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: Co-Authored-By 缺括号模型 ID → 格式警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Claude Code'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Co-Authored-By 格式不符合"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: Codex CLI 合法格式 → 不警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Codex CLI (gpt-5.3-codex)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["格式不符合"],
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "commit-check: 多行 Co-Authored-By (Claude + Codex 协作) 都合法 → 不警告",
+    "hook": "commit-check.js",
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'fix bug\n\nCo-Authored-By: Claude Code (claude-opus-4-6)\nCo-Authored-By: Codex CLI (gpt-5.3-codex)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["格式不符合"],
+      "stdout": "passthrough"
+    }
   }
 ]

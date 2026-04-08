@@ -23,21 +23,65 @@ process.stdin.on('end', () => {
     const input = JSON.parse(raw);
     const cmd = String(input.tool_input?.command || '');
 
-    // === 检查 1: git commit 必须包含 Co-Authored-By ===
+    // === 检查 1: git commit 必须包含 Co-Authored-By (格式也要对) ===
     if (/git\s+commit/.test(cmd)) {
       // 从命令中提取 commit message
       const msgMatch = cmd.match(/-m\s+["']([^"']+)["']/s) ||
                         cmd.match(/-m\s+"?\$\(cat\s+<<['"]?EOF([\s\S]*?)EOF/);
       const msg = msgMatch ? (msgMatch[1] || msgMatch[2] || '') : '';
 
-      if (msg && !/Co-Authored-By:/i.test(msg)) {
-        process.stderr.write(
-          '[Commit Check] AI 辅助的 commit 缺少 Co-Authored-By 标注。\n' +
-          '→ 格式: Co-Authored-By: {工具名} ({模型ID})\n' +
-          '→ 例如: Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
-          '→ 详见 methodology/12-commit-standards.md\n'
-        );
-        // 警告但不阻止，因为可能是纯人工 commit
+      if (msg) {
+        const hasCoAuthored = /Co-Authored-By:/i.test(msg);
+        if (!hasCoAuthored) {
+          process.stderr.write(
+            '[Commit Check] AI 辅助的 commit 缺少 Co-Authored-By 标注。\n' +
+            '→ 格式: Co-Authored-By: {工具名} ({模型ID})\n' +
+            '→ 例如: Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
+            '→ 详见 methodology/12-commit-standards.md\n'
+          );
+          // 警告但不阻止，因为可能是纯人工 commit
+        } else {
+          // 格式校验：每一行 Co-Authored-By 必须匹配 methodology/12-commit-standards.md 规定的格式
+          // 允许的工具名清单与 methodology/12 表格同步，缺少某工具只需在这里加
+          const ALLOWED_TOOLS = [
+            'Claude Code',
+            'Codex CLI',
+            'Cursor',
+            'Windsurf',
+            'GitHub Copilot',
+            'OpenCode',
+          ];
+          const toolAlt = ALLOWED_TOOLS
+            .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+            .join('|');
+          // 正则：Co-Authored-By: <Tool Name> (<model-id>)  —— 模型 ID 允许字母/数字/点/连字符/下划线
+          // 禁止尾部 <email>（老模板产物）；括号模型 ID 必选
+          const validLine = new RegExp(`^Co-Authored-By:\\s+(?:${toolAlt})\\s+\\([\\w.\\-]+\\)\\s*$`);
+
+          const badLines = [];
+          for (const line of msg.split('\n')) {
+            if (/^Co-Authored-By:/i.test(line)) {
+              if (!validLine.test(line.trim())) {
+                badLines.push(line.trim());
+              }
+            }
+          }
+
+          if (badLines.length > 0) {
+            process.stderr.write(
+              '[Commit Check] Co-Authored-By 格式不符合 methodology/12-commit-standards.md。\n' +
+              '→ 标准格式: Co-Authored-By: {工具名} ({模型ID})\n' +
+              '→ 例如:    Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
+              '→ 允许的工具名: ' + ALLOWED_TOOLS.join(' / ') + '\n' +
+              '→ 禁止: 尾部 <email> / 括号外带空格 / 工具名与表格不符\n' +
+              '→ 不合规的行:\n'
+            );
+            for (const l of badLines) {
+              process.stderr.write('    ' + l + '\n');
+            }
+            process.stderr.write('→ 修正后重新 commit。警告级别，不阻止执行\n');
+          }
+        }
       }
     }
 
