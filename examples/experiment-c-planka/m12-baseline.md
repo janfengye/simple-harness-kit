@@ -138,19 +138,20 @@ remote-address
 **问题**: 新贡献者 clone 仓库后第一次跑测试，会撞到这个坑。`.env.sample` 里有这些 vars 但测试没有 `.env.test` 或类似预设。
 **修复方案**: 提供 `server/.env.test.sample` 或在 `npm test` script 里预设最小 env。
 
-## 基础设施成熟度评分（按 M-12 v2 H1-H5 判据）
+## 基础设施成熟度评分（按 M-12 v2+Codex review 的 H1-H6 判据）
 
-按 [m12-tiered-tdd-draft.md](./m12-tiered-tdd-draft.md) v2 的 5 个硬标准：
+按 [m12-tiered-tdd-draft.md](./m12-tiered-tdd-draft.md) v2 + Codex review 后的 6 个硬标准（H1/H2/H4 是 blocker-class）：
 
-| 硬标准 | Planka |
-|---|:---:|
-| H1: 裸跑 `npm test` 无预设能跑 | ❌ (故障 5: BASE_URL 等必须预设) |
-| H2: 测试 bootstrap 无硬编码 timeout bug | ❌ (故障 1: lifecycle.test.js 5s) |
-| H3: 测试代码无 dead / skipped | ❌ (故障 2: User.test.js 整个注释) |
-| H4: 测试能独立于 runtime 跑（或能完整 bootstrap） | ❌ (故障 3: remote-address.js 依赖 sails 注入的 `_`) |
-| H5: Coverage tool 存在且 CI 跑 | ❌ (故障 4: 无 nyc/c8) |
+| 硬标准 | 类型 | Planka 治理前 |
+|---|:---:|:---:|
+| H1: 裸跑 `npm test` 无预设能跑 | **blocker** | ❌ (故障 5: BASE_URL 等必须预设) |
+| H2: 测试 bootstrap 无硬编码 timeout bug | **blocker** | ❌ (故障 1: lifecycle.test.js 5s) |
+| H3: 测试代码无 dead / skipped | normal | ❌ (故障 2: User.test.js 整个注释) |
+| H4: 测试能独立于 runtime 跑（或能完整 bootstrap） | **blocker** | ❌ (故障 3: remote-address.js 依赖 sails 注入的 `_`) |
+| H5: Coverage tool 存在且 CI 跑 | normal | ❌ (故障 4: 无 nyc/c8) |
+| H6: 测试确定性 / 无 flaky | normal | ⚠️ 未评估（需多次重跑统计） |
 
-**Planka 当前 0 / 5 pass → Tier 0 (BROKEN)**
+**Planka 当前 0 / 6 pass，且全部 3 个 blocker (H1/H2/H4) 都 fail → Tier 0 (BROKEN)**
 
 按 M-12 v2 的规则，Tier 0 意味着 **Planka 禁止开启新 feature 的 EXECUTE 阶段，必须先修 infra 到 Tier 1**。
 

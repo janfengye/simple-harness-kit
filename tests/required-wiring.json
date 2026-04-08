@@ -1,5 +1,20 @@
 {
-  "_comment": "Single source of truth for required hook wiring in the minimum Harness config. Consumed by tests/template-integrity.js AND tests/e2e-acceptance-validate.sh. If you change this, re-run 'node tests/run.js' — template-integrity will verify both templates/settings-json.tmpl AND init-prompt.md contain exactly this set.",
+  "_comment": "Single source of truth for required hook wiring AND required files in the minimum Harness config. Consumed by tests/template-integrity.js AND tests/e2e-acceptance-validate.sh. If you change this, re-run 'node tests/run.js' — template-integrity will verify both templates/settings-json.tmpl AND init-prompt.md contain exactly this set.",
+  "required_files": [
+    ".claude/settings.json",
+    ".claude/rules/role-constraints.md",
+    ".claude/rules/qa-standards.md",
+    ".claude/rules/feedback-workflow.md",
+    ".claude/rules/harness-entry.md",
+    "scripts/hooks/harness-stage-guard.js",
+    "scripts/hooks/harness-session-start.js",
+    "scripts/hooks/session-logger.js",
+    "scripts/hooks/safety-guard.js",
+    "scripts/hooks/find-root.js",
+    "scripts/hooks/session-end.js",
+    "docs/constraints.md",
+    "CLAUDE.md"
+  ],
   "wirings": [
     { "event": "SessionStart", "matcher": null, "script": "harness-session-start.js" },
     { "event": "PreToolUse", "matcher": "Bash", "script": "harness-stage-guard.js" },

@@ -336,6 +336,16 @@ function runTemplateIntegrityTests() {
       return 'SKILL.md 未引用 required-wiring.json (违反 C-INIT-04)';
     }
 
+    // (c2) 必须提到 scripts/hooks/ (要求 AI 复制现有 hook 脚本而非凭记忆生成)
+    if (!/scripts\/hooks/.test(content)) {
+      return 'SKILL.md 未引用 scripts/hooks/ (违反 C-INIT-04: hook 脚本不得凭记忆生成, 必须从源复制)';
+    }
+
+    // (c3) 必须提到 templates/rules/ (要求 AI 从 rule 模板派生而非凭记忆)
+    if (!/templates\/rules/.test(content)) {
+      return 'SKILL.md 未引用 templates/rules/ (违反 C-INIT-04: rule 文件不得凭记忆生成, 必须从模板派生)';
+    }
+
     // (d) 必须有"凭记忆生成"的禁令关键字
     if (!/凭记忆/.test(content)) {
       return 'SKILL.md 缺少"凭记忆"禁令关键字 (违反 C-INIT-04 的反退化要求)';
@@ -359,6 +369,56 @@ function runTemplateIntegrityTests() {
       if (span <= 30) {
         return `SKILL.md 在 ${span} 行内列出 ${hookRefs.length} 个 hook 路径，疑似硬编码必选清单 (违反 C-INIT-04)`;
       }
+    }
+  });
+
+  // ── T9: stage-guard.js 内部 READ_TOOLS / TASK_TOOLS 数组与 required-wiring.json 一致性检测 ──
+  // #33 治理: 防止 stage-guard 内部数组与外部 wiring 漂移. 例如新增一个 PreToolUse:Foo
+  // matcher 但忘了加到 stage-guard 的 READ_TOOLS / TASK_TOOLS 数组. 早期 #16 矩阵已记录
+  // 这种 "intent vs registered" 漂移类型, 现在用脚本守门.
+  check('stage-guard: READ_TOOLS / TASK_TOOLS 数组与 required-wiring.json 一致 (#33)', () => {
+    if (!requiredWirings) return '前置检查失败，跳过';
+    const guardPath = path.join(SCRIPTS_HOOKS_DIR, 'harness-stage-guard.js');
+    if (!fs.existsSync(guardPath)) return `文件不存在: ${guardPath}`;
+    const content = fs.readFileSync(guardPath, 'utf8');
+
+    // 解析 stage-guard 内部硬编码数组
+    const readMatch = content.match(/const\s+READ_TOOLS\s*=\s*\[([^\]]+)\]/);
+    const taskMatch = content.match(/const\s+TASK_TOOLS\s*=\s*\[([^\]]+)\]/);
+    if (!readMatch) return 'READ_TOOLS 数组定义未找到（结构变了？）';
+    if (!taskMatch) return 'TASK_TOOLS 数组定义未找到（结构变了？）';
+
+    const parseArray = str => str.match(/['"]([^'"]+)['"]/g).map(s => s.slice(1, -1));
+    const readTools = parseArray(readMatch[1]);
+    const taskTools = parseArray(taskMatch[1]);
+
+    // 从 required-wiring.json 提取 PreToolUse 中"非写类"的 matcher (READ 候选)
+    // 即所有 PreToolUse matcher 中，不在写类（Bash/Edit/Write/Agent）也不在 task 类的
+    const WRITE_MATCHERS = new Set(['Bash', 'Edit', 'Write', 'Agent']);
+    const requiredPreMatchers = new Set(
+      requiredWirings
+        .filter(w => w.event === 'PreToolUse' && w.matcher)
+        .map(w => w.matcher)
+    );
+
+    // (a) READ_TOOLS 中的每个工具，如果在 required PreToolUse matcher 里出现，必须是非写非任务类
+    //     反之 required PreToolUse 中非写非任务类的 matcher，应该出现在 READ_TOOLS 中
+    const expectedReadTools = [...requiredPreMatchers].filter(
+      m => !WRITE_MATCHERS.has(m) && !['TaskUpdate', 'TaskCreate', 'TaskList', 'TaskGet'].includes(m)
+    );
+
+    const missingFromGuard = expectedReadTools.filter(t => !readTools.includes(t));
+    if (missingFromGuard.length > 0) {
+      return `READ_TOOLS 缺少 required-wiring 中的非写非任务 PreToolUse matcher: ${missingFromGuard.join(', ')}`;
+    }
+
+    // (b) TASK_TOOLS 必须包含 required-wiring 中所有 PreToolUse:Task* matcher
+    const requiredTaskMatchers = [...requiredPreMatchers].filter(m =>
+      ['TaskUpdate', 'TaskCreate', 'TaskList', 'TaskGet'].includes(m)
+    );
+    const missingTask = requiredTaskMatchers.filter(t => !taskTools.includes(t));
+    if (missingTask.length > 0) {
+      return `TASK_TOOLS 缺少 required-wiring 中的 task matcher: ${missingTask.join(', ')}`;
     }
   });
 

@@ -1,6 +1,6 @@
 # M-12: 测试基础设施治理 + 强制补测试（ADR 草稿 v2）
 
-**状态**: 🟡 DRAFT v2 —— 方向大改，等用户 review 才能迁入 methodology/
+**状态**: 🟢 DRAFT v2 + Codex review patches —— 已通过 Codex 交叉验收 (PASS-with-notes)，含 emergency hotfix override + blocker-class 标记
 **日期**: 2026-04-08
 **作者**: Claude Code (claude-opus-4-6) 基于 Experiment C Planka 实测 + 用户反馈方向修正
 **关联任务**: #11 (实战 + baseline) + #10 (方法论落地)
@@ -35,33 +35,68 @@
 
 ## 诊断维度：测试基础设施健康度
 
-**不用覆盖率作为主判据**。覆盖率是结果，不是原因。主判据是 infra 健康度，按 5 个硬标准打分：
+**不用覆盖率作为主判据**。覆盖率是结果，不是原因。主判据是 infra 健康度，按 6 个硬标准（H1-H6）打分。**注意：H1/H2/H4 是 blocker-class，单项 fail 即视为 Tier 0**（不能用平均分掩盖）。
 
-| 硬标准 | 判断 | Planka 当前 |
-|---|---|:---:|
-| **H1: 裸跑 `npm test` 无预设能跑**（新贡献者第一次就能跑） | yes / no | ❌ (BASE_URL/DATABASE_URL/SECRET_KEY 必须预设) |
-| **H2: 测试 bootstrap 在 CI 合理时间内完成**（无硬编码 timeout bug） | yes / no | ❌ (lifecycle 5s timeout 太短) |
-| **H3: 测试代码无 dead / skipped**（无 `describe.skip`、无整文件注释） | yes / no | ❌ (User.test.js 整个注释) |
-| **H4: 测试能独立于 runtime 跑**（源码不耦合 runtime 全局，或测试套能完整 bootstrap runtime） | yes / no | ❌ (remote-address.js 依赖 sails 注入的 `_`) |
-| **H5: Coverage tool 存在且 CI 跑**（有动态覆盖率数据） | yes / no | ❌ (无 nyc/c8) |
+| 硬标准 | 类型 | 判断 | Planka 治理前 | Planka 治理后 |
+|---|:---:|---|:---:|:---:|
+| **H1: 裸跑 `npm test` 无预设能跑**（新贡献者第一次就能跑） | **blocker** | yes / no | ❌ | ✅ |
+| **H2: 测试 bootstrap 在 CI 合理时间内完成**（无硬编码 timeout bug） | **blocker** | yes / no | ❌ | ✅ |
+| **H3: 测试代码无 dead / skipped**（无 `describe.skip`、无整文件注释） | normal | yes / no | ❌ | ✅ |
+| **H4: 测试能独立于 runtime 跑**（源码不耦合 runtime 全局，或测试套能完整 bootstrap runtime） | **blocker** | yes / no | ❌ | ✅ |
+| **H5: Coverage tool 存在且 CI 跑**（有动态覆盖率数据） | normal | yes / no | ❌ | ✅ |
+| **H6: 测试确定性 / 无 flaky**（CI 重复跑应稳定 PASS, 无外部隐式依赖, hermetic） | normal | yes / no | ⚠️ 待评估（修复后未做多次 CI 重跑） | ⚠️ |
 
-**Planka 当前 5/5 fail → 判定为 BROKEN infra**。
+**Blocker-class 规则**: 即使总分 4/6 或 5/6，只要 H1 / H2 / H4 任一 fail，就是 Tier 0 BROKEN，不允许进入新 feature 工作。理由：blocker-class 直接决定"测试能否被执行 + 信号能否被信任"，无法被其他 H 项的得分掩盖。
 
-## Tier 重定义
+**Planka 治理前**: 6 项全 ❌ → Tier 0 BROKEN
+**Planka 治理后**: H1-H5 全 ✅，H6 待评估 → Tier 1 FRAGILE
 
-按 infra 健康度（H1-H5 通过数），**不是按覆盖率 %**：
+## Infra Tier 重定义
 
-| Tier | H 通过数 | 含义 | Harness 准入规则 |
-|---|:---:|---|---|
-| **Tier 0: BROKEN** | 0-2 / 5 | Infra 有阻塞性 bug | **禁止开始新 feature**。必须先修 infra 到 Tier 1 才能进 EXECUTE 阶段。或者 explicitly 切到 M-12 修复任务 |
-| **Tier 1: FRAGILE** | 3-4 / 5 | 能跑但不完整 | **新代码必须带测试**；H 项缺失的部分必须跟踪修复；允许 "一边补 infra 一边做 feature" |
-| **Tier 2: SOLID** | 5 / 5 | 所有硬标准通过 | **常规 TDD**；可以完整跑 methodology/04-qa-pyramid 的 Layer 1-5 |
-| **Tier 3: MATURE** | 5 / 5 + 覆盖率守门 | Tier 2 + 覆盖率 CI 阈值 + mutation test | **严格 TDD + mutation testing**（可选） |
+按 infra 健康度（H1-H6 + blocker-class 优先级），**不是按覆盖率 %**：
+
+| Infra Tier | 判定 | 含义 | Harness 准入规则 |
+|---|---|---|---|
+| **Tier 0: BROKEN** | 任一 blocker (H1/H2/H4) fail，或 ≤ 3/6 | Infra 有阻塞性 bug | **禁止开始新 feature**。必须先修 infra 到 Tier 1 才能进 EXECUTE 阶段。或者 explicitly 切到 M-12 修复任务。**唯一例外**：Sev0/security/regulatory hotfix 走 emergency override（见下文） |
+| **Tier 1: FRAGILE** | 所有 blocker pass，4-5/6 | 能跑但不完整 | **新代码必须带测试**；H 项缺失的部分必须跟踪修复；允许 "一边补 infra 一边做 feature" |
+| **Tier 2: SOLID** | 6 / 6 | 所有硬标准通过 | **常规 TDD**；可以完整跑 methodology/04-qa-pyramid 的 Layer 1-5 |
+| **Tier 3: MATURE** | 6/6 + 覆盖率 CI 守门 + mutation testing | Tier 2 + 阈值 | **严格 TDD + mutation testing**（可选） |
 
 **关键区别 vs v1**: 
-- Tier 不再是"允许什么"的维度，而是"当前状态 + 升级到下一层必须做什么"
+- Infra Tier 不再是"允许什么"的维度，而是"当前状态 + 升级到下一层必须做什么"
 - **所有 Tier 都强制新代码带测试**，Tier 0/1 只是"补测试之前必须先做哪些 infra 修复"
 - Tier 0 = **阻塞新 feature**，不是 "放水允许不写测试"
+- 命名: **"Infra Tier"** 而非 "Tier"，避免与 methodology 其他地方的 stage/role 概念冲突
+
+## Emergency Hotfix Override（v2 + Codex review 加入）
+
+Tier 0 项目通常禁止 EXECUTE 新 feature。**唯一例外**是必须走 emergency lane 的紧急修复：
+
+### 触发条件（all 必须满足）
+
+- **Sev0** 严重程度（生产 down / 数据丢失 / 大规模用户阻断）
+- **Security** 漏洞需立即 patch（CVE 公开 / active exploit）
+- **Regulatory** 强制（GDPR / 法律要求 N 天内修复）
+
+### 走 emergency lane 必须做的事
+
+1. **Incident tag**: commit message 必须含 `[emergency-hotfix]` + 引用具体 incident ID（用户工单 / 安全报告 / 法律通知）
+2. **Minimal scope**: 改动只能修这一个 incident，**禁止顺手改其他**
+3. **Mandatory manual verification**: 由 reviewer/director 在 staging 或 production 验证修复有效，记录到 commit message 或 ops log
+4. **Hard deadline for follow-up**: hotfix 后 **N 天内**（建议 7 天）必须：
+   - 补对应的 unit/integration test 覆盖修复路径
+   - 完成 Tier 0 → Tier 1 升级（如果 hotfix 之前是 Tier 0）
+   - 写 incident retrospective（含为什么 emergency 必须存在）
+5. **审计登记**: 在 `docs/constraints.md` 的 violation history 区登记这次 emergency 例外
+
+### 不算 emergency 的情况
+
+- "用户着急想要" → no
+- "deadline 临近" → no
+- "看起来很简单的改动" → no
+- "下个 release 才修就晚了" → no
+
+emergency lane **不是** "免测试通道"，而是**例外承认 Tier 0 项目偶尔有必须立刻 ship 的情况**，并强制 follow-up。如果 emergency 频繁触发，说明 Tier 0 治理推不动，应该升级为 P0 task。
 
 ## 对 Planka 的具体应用
 
@@ -117,14 +152,18 @@ Planka 当前 Tier 0（H1-H5 全 fail）。按 M-12 v2：
 - "Tier 0 项目禁止开启新 feature EXECUTE 阶段，必须先通过 M-12 治理升级到 Tier 1"
 - 这可能需要 stage-guard hook 加 Tier 检测（独立 hook 或扩展现有 stage-guard）
 
-## Open Questions（v2 版本）
+## Open Questions（v2 + Codex review 后的状态）
 
-1. **Tier 判定在 init 时 vs 持续**？我倾向 init 时一次判定 + 存到 `.harness/infra-tier.json`，后续 stage-guard 参考它
-2. **如何检测 infra tier 的自动化 hook**？人工评分 vs 脚本自动？H1-H5 大部分可以脚本化
-3. **Tier 0 "禁止新 feature" 是否太严**？可能的软化：允许 "critical hotfix 走紧急通道，但必须在 N 天内补测试 + 升级 tier"
-4. **Experiment C 的追溯处理**：要不要让 Experiment C agent（或现在的我）补一套测试给 board/list description feature？还是仅作为反面教材登记就够？
-5. **M-12 的"Tier"概念和 methodology 其他地方的 stage/role 概念的语义是否冲突**？需要术语统一
-6. **是否真的要把"Tier 0 阻止新 feature" 做成 hook 层强制**？Rules 层够不够？
+| # | 问题 | Codex review 给出的答案 | 状态 |
+|---|---|---|:---:|
+| 1 | Tier 判定在 init 时 vs 持续？ | **Init 时一次初始化 + 每次 EXECUTE gate 重算** | ✅ 解决 |
+| 2 | 如何检测 infra tier 的自动化 hook？ | **H1/H2/H3/H5 可脚本化, H4 hybrid/manual, H6 hybrid（多次重跑统计）** | ✅ 解决 |
+| 3 | Tier 0 "禁止新 feature" 是否太严？ | **正常情况是对的；唯一例外 = emergency hotfix override（已加专段）** | ✅ 解决 |
+| 4 | Experiment C 的追溯处理 | **不算 acceptance-blocking；可作为 follow-up case study, 不必本轮处理** | ✅ 推迟 |
+| 5 | "Tier" 与 methodology 其他 stage/role 语义冲突？ | **重命名为 "Infra Tier"** | ✅ 解决（已应用） |
+| 6 | "Tier 0 阻止新 feature" 是否要做 hook 层强制？ | **rule 层先落地, hook enforcement 后续做（为 follow-up task）** | ✅ 推迟 |
+
+**结论**: Codex round 1 给的 PASS-with-notes 已无 acceptance-blocking 项。两个 must-fix patches（hotfix override + blocker-class 标记）已应用。可以进入 #10 (写 methodology/) 阶段。
 
 ## 本轮 #11 的接续工作
 

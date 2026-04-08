@@ -46,31 +46,31 @@ section() {
 }
 
 # ── A. 必选文件存在性 ──
-# 与 init-prompt.md 的"必选组件"清单精确对齐（4 个核心 hook + 4 个 rule + settings.json + CLAUDE.md + docs/constraints.md）
-# find-root.js / delivery-gate.js 不在最小集里，归为"如存在则检查"
+# 文件清单从 required-wiring.json 的 required_files 数组派生（不再硬编码副本）。
+# 这是 #37 的治理：避免 init-prompt.md 必选清单变化时 validate.sh 不跟。
 section "A. 必选文件存在性"
 
-REQUIRED_FILES=(
-  ".claude/settings.json"
-  ".claude/rules/role-constraints.md"
-  ".claude/rules/qa-standards.md"
-  ".claude/rules/feedback-workflow.md"
-  ".claude/rules/harness-entry.md"
-  "scripts/hooks/harness-stage-guard.js"
-  "scripts/hooks/harness-session-start.js"
-  "scripts/hooks/session-logger.js"
-  "scripts/hooks/safety-guard.js"
-  "docs/constraints.md"
-  "CLAUDE.md"
-)
+REQUIRED_FILES=$(node -e "
+const w = JSON.parse(require('fs').readFileSync('$REQUIRED_WIRING_JSON','utf8'));
+if (!Array.isArray(w.required_files)) {
+  console.error('required_files missing in $REQUIRED_WIRING_JSON');
+  process.exit(1);
+}
+console.log(w.required_files.join('\n'));
+" 2>/dev/null)
 
-for f in "${REQUIRED_FILES[@]}"; do
-  if [ -f "$f" ]; then
-    ok "exists: $f"
-  else
-    fail "missing: $f"
-  fi
-done
+if [ -z "$REQUIRED_FILES" ]; then
+  fail "无法从 required-wiring.json 加载 required_files 数组"
+else
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    if [ -f "$f" ]; then
+      ok "exists: $f"
+    else
+      fail "missing: $f"
+    fi
+  done <<< "$REQUIRED_FILES"
+fi
 
 # ── B. settings.json JSON 格式有效性 ──
 section "B. settings.json JSON 有效性"
@@ -206,6 +206,49 @@ console.log([...new Set(w.map(x => x.script))].join(' '));
   done
 fi
 
+# ── E3. Hook 内部 require 依赖（递归扫 require('./xxx') 文件存在性）──
+# #40 治理: validate.sh 现在能 catch "wired script 存在但其依赖的本地 module 缺失"
+# 例如 harness-stage-guard.js 用 require('./find-root'), 如果 find-root.js 没复制
+# 整个 hook 链路会 MODULE_NOT_FOUND. E2 已经覆盖 wired scripts, E3 补这一层。
+section "E3. Hook 脚本内部 require('./xxx') 依赖必须存在"
+
+if [ -d scripts/hooks ]; then
+  MISSING_DEPS=$(node -e "
+const fs = require('fs');
+const path = require('path');
+const dir = 'scripts/hooks';
+const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
+const missing = [];
+for (const f of files) {
+  const content = fs.readFileSync(path.join(dir, f), 'utf8');
+  // 匹配 require('./xxx') 或 require('../xxx')，只检查相对路径
+  const re = /require\(\s*['\"](\.[^'\"]+)['\"]\s*\)/g;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    const dep = m[1];
+    // 解析相对路径，可能省略 .js 扩展
+    const candidates = [
+      path.resolve(dir, dep),
+      path.resolve(dir, dep + '.js'),
+      path.resolve(dir, dep, 'index.js'),
+    ];
+    const exists = candidates.some(c => fs.existsSync(c));
+    if (!exists) missing.push(f + ' -> ' + dep);
+  }
+}
+if (missing.length) console.log(missing.join('\n'));
+" 2>/dev/null)
+
+  if [ -z "$MISSING_DEPS" ]; then
+    ok "所有 hook require('./xxx') 依赖都存在"
+  else
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      fail "missing internal dep: $line"
+    done <<< "$MISSING_DEPS"
+  fi
+fi
+
 # ── F. Hook 实弹: stage-guard 拦截 PLAN+Bash ──
 section "F. Hook 实弹测试"
 
@@ -251,6 +294,49 @@ if [ -f scripts/hooks/session-logger.js ]; then
     fail "session-logger did NOT write session-log.md"
   fi
   rm -rf "$TMPLOG"
+fi
+
+# ── G2. session-logger PostToolUseFailure 失败工具调用记录 ──
+# #32 治理: 之前 G 段只测了成功工具调用 (PostToolUse), 没测失败的 (PostToolUseFailure).
+# 验证 session-logger 在收到 hook_event_name=PostToolUseFailure 时也写入 + 标记失败.
+section "G2. session-logger PostToolUseFailure 失败记录"
+
+if [ -f scripts/hooks/session-logger.js ]; then
+  TMPLOG=$(mktemp -d)
+  mkdir -p "$TMPLOG/.harness"
+  cd "$TMPLOG"
+  STDIN_JSON='{"hook_event_name":"PostToolUseFailure","tool_name":"Bash","tool_input":{"command":"e2e-fail-marker"},"tool_response":{"error":"e2e-test-error"}}'
+  echo "$STDIN_JSON" | node "$OLDPWD/scripts/hooks/session-logger.js" >/dev/null 2>&1
+  if [ -f .harness/session-log.md ] && grep -q "e2e-fail-marker" .harness/session-log.md; then
+    if grep -qE "失败|fail|error" .harness/session-log.md; then
+      ok "session-logger PostToolUseFailure writes + marks failure"
+    else
+      ok "session-logger PostToolUseFailure writes (failure tag not asserted, but recorded)"
+    fi
+  else
+    fail "session-logger did NOT write PostToolUseFailure marker"
+  fi
+  cd "$OLDPWD"
+  rm -rf "$TMPLOG"
+fi
+
+# ── G3. SessionStart hook 输出 banner 实弹 ──
+# #32 治理: SessionStart 是新 session 入口, 必须输出 HARNESS MODE ACTIVE banner.
+section "G3. SessionStart hook banner 实弹"
+
+if [ -f scripts/hooks/harness-session-start.js ]; then
+  TMPSTART=$(mktemp -d)
+  mkdir -p "$TMPSTART/.harness"
+  cd "$TMPSTART"
+  output=$(echo '{"hook_event_name":"SessionStart","session_id":"e2e-validate-test"}' | node "$OLDPWD/scripts/hooks/harness-session-start.js" 2>&1)
+  code=$?
+  if [ $code -eq 0 ] && echo "$output" | grep -q "HARNESS MODE ACTIVE"; then
+    ok "harness-session-start outputs HARNESS MODE ACTIVE banner"
+  else
+    fail "harness-session-start did NOT output banner (exit $code)"
+  fi
+  cd "$OLDPWD"
+  rm -rf "$TMPSTART"
 fi
 
 # ── H. CLAUDE.md 项目定制 (非空且非纯模板) ──

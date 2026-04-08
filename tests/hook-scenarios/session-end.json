@@ -33,7 +33,7 @@
     }
   },
   {
-    "name": "session-end: SessionEnd + session-log.md 已存在 → append 而非覆盖",
+    "name": "session-end: SessionEnd + session-log.md 已存在 → append 而非覆盖（稳定 count 断言）",
     "hook": "session-end.js",
     "stdin": {
       "hook_event_name": "SessionEnd",
@@ -53,9 +53,11 @@
             "Session 结束",
             "session**: sid-append"
           ],
-          "containsNot": [
-            "开始时间: 2026-04-07T11"
-          ]
+          "containsCount": {
+            "## 元信息": 1,
+            "# Harness Session Log": 1,
+            "## 事件记录": 1
+          }
         }
       }
     }

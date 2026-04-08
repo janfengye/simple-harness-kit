@@ -141,4 +141,27 @@ settings.json 必须至少包含以下 Hook 注册。**真实源是 `tests/requi
 }
 ```
 
-可选 Hook 在此基础上追加。
+## 可选 Hook 与最小集的关系
+
+**`tests/required-wiring.json` 是最小集（19 wirings），上面的 JSON 块严格等于这个最小集**。
+
+**`templates/settings-json.tmpl` 是完整 superset**（最小集 + 下面 7 个可选 wiring），适合"想一次启用全部 optional 的项目"。
+
+可选 wiring 清单：
+
+| Event | Matcher | Script | 何时启用 |
+|---|---|---|---|
+| `PreToolUse` | `Bash` | `verification-gate.js` | 有测试框架，commit 前需要验证 |
+| `PreToolUse` | `Bash` | `delivery-review.js` | 有交付物（pdf/pptx/zip 等） |
+| `PreToolUse` | `Bash` | `commit-check.js` | 团队需要统计 AI 辅助占比 |
+| `PreToolUse` | `Agent` | `agent-check.js` | 会派 Agent 做子任务，需要 Constraint ID 引用 |
+| `PreToolUse` | `Edit` | `context-monitor.js` | 长 session 场景，需要超阈值提醒 compact |
+| `PreToolUse` | `Write` | `context-monitor.js` | 同上 |
+| `Stop` | (无 matcher) | `delivery-gate.js` | 严格交付守门——阻止在 EXECUTE/VERIFY(无证据)阶段宣称完成 |
+
+**两种 init 策略**：
+
+1. **最小集策略（推荐）**：从 `tests/required-wiring.json` 直接派生最小 settings.json，不含任何 optional wiring。再按上面表格根据项目需要逐项添加。`Stop` 段在最小集中**不存在**——只有添加 `delivery-gate.js` 时才出现。
+2. **完整 superset 策略**：从 `templates/settings-json.tmpl` 复制完整版（含全部 optional），然后按"何时启用"列删除不需要的项。`Stop` 段在 template 中**存在**，需要根据是否启用 delivery-gate 决定是否保留。
+
+详见 `skills/harness-init/SKILL.md` 第 3 步的"两种生成策略"对比段。

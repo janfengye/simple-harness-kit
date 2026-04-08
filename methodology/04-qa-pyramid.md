@@ -48,6 +48,18 @@
 
 **铁律：** NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 
+### Pre-Layer 1 Gate: Infra Tier ≥ 1
+
+> 上面的"铁律"有一个**前置条件**：项目的测试基础设施必须 ≥ Infra Tier 1。
+> 如果项目处于 Tier 0 (BROKEN)，连"先写失败测试"都执行不了（测试 bootstrap 跑不起来 / 测试结果不可信）。
+>
+> Infra Tier 0 项目必须先走 M-12 治理任务把 infra 修好，才能进入 EXECUTE 阶段执行 Layer 1。
+> 唯一例外是 Sev0/security/regulatory 紧急 hotfix，走 emergency override（必须有 incident tag + minimal scope + manual verification + N 天内 follow-up 补测试）。
+>
+> 完整定义、6 个 H 硬标准、4 个 Tier 判据、emergency override 规则见 [16-infra-tier.md](./16-infra-tier.md)。
+>
+> **结论**: Infra Tier ≥ 1 是让 Layer 1 铁律 *能够被执行* 的前提，不是 Layer 1 的放松。Tier 0 项目"不写测试"是被阻止的，不是被允许的。
+
 ## Layer 2: Verification Loop
 
 **谁执行：** 自动化工具（不依赖 LLM 判断）

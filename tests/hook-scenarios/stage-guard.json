@@ -9,6 +9,24 @@
     }
   },
   {
+    "name": "stage-guard: stage 文件是 symlink → 拒绝读取 + 视为不存在 (#30)",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "ls" } },
+    "setup": {
+      ".harness/current-stage.json": {
+        "symlink_to": ".harness/attacker-controlled.json",
+        "target_content": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"injected\"}"
+      }
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": [
+        "SECURITY",
+        "is a symlink"
+      ]
+    }
+  },
+  {
     "name": "stage-guard: 无 stage 文件但写 stage 文件 → 放行",
     "hook": "harness-stage-guard.js",
     "stdin": {

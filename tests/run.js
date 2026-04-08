@@ -100,10 +100,25 @@ function setupTempDir(scenario) {
   if (scenario.setup) {
     const recentTs = recentTimestamp();
     for (const [filePath, rawContent] of Object.entries(scenario.setup)) {
-      const content = rawContent.replace(/RECENT_TIMESTAMP/g, recentTs);
       const fullPath = path.join(tmpDir, filePath);
       fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-      fs.writeFileSync(fullPath, content);
+      // Object form: support symlink_to (for symlink bypass tests, #30)
+      if (rawContent && typeof rawContent === 'object' && rawContent.symlink_to) {
+        // Resolve target relative to tmpDir if not absolute
+        const target = path.isAbsolute(rawContent.symlink_to)
+          ? rawContent.symlink_to
+          : path.join(tmpDir, rawContent.symlink_to);
+        // Optionally create the target file with given content first
+        if (rawContent.target_content !== undefined) {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          fs.writeFileSync(target, String(rawContent.target_content).replace(/RECENT_TIMESTAMP/g, recentTs));
+        }
+        fs.symlinkSync(target, fullPath);
+      } else {
+        // String form: write file with placeholder substitution
+        const content = String(rawContent).replace(/RECENT_TIMESTAMP/g, recentTs);
+        fs.writeFileSync(fullPath, content);
+      }
     }
   }
 
@@ -256,6 +271,23 @@ function runScenario(scenario) {
               for (const f of forbidden) {
                 if (content.includes(f)) {
                   errors.push(`文件 ${filePath} 不应包含: "${f}"`);
+                }
+              }
+            }
+            // 精确出现次数断言：containsCount: { "needle": N }
+            //   N 的语义: 该 substring 在文件内容中必须出现恰好 N 次
+            //   用于检测重复/缺失（如 append 操作不应该让某个 sentinel 多出来）
+            if (check.containsCount !== undefined) {
+              for (const [needle, expectedCount] of Object.entries(check.containsCount)) {
+                // 全局非重叠次数计数
+                let count = 0;
+                let idx = 0;
+                while ((idx = content.indexOf(needle, idx)) !== -1) {
+                  count++;
+                  idx += needle.length;
+                }
+                if (count !== expectedCount) {
+                  errors.push(`文件 ${filePath} 子串 "${needle}" 出现 ${count} 次, 期望 ${expectedCount} 次`);
                 }
               }
             }

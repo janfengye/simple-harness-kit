@@ -41,6 +41,43 @@ const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const STALE_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_STDIN = 1024 * 1024;
 
+// 安全文件读取: 拒绝 symlink 防止 bypass attack。
+// #30 治理: 攻击者把 .harness/current-stage.json symlink 到外部受控文件可以
+// 操纵 stage state. 用 lstat 检查并拒绝 symlink, 视为读取失败。
+// 适用于所有 .harness/* 状态文件 (current-stage / tool-count / stage-history / verify-evidence).
+function safeReadFileSync(filePath) {
+  try {
+    const stats = fs.lstatSync(filePath);
+    if (stats.isSymbolicLink()) {
+      process.stderr.write(
+        `[Harness Stage Guard] SECURITY: ${filePath} is a symlink, refusing to read. ` +
+        `This file should be a regular file. Possible bypass attempt detected.\n`
+      );
+      return null;
+    }
+    return fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function safeFileExists(filePath) {
+  try {
+    const stats = fs.lstatSync(filePath);
+    // 存在但是 symlink → 视为不存在 (forces re-creation as regular file)
+    if (stats.isSymbolicLink()) {
+      process.stderr.write(
+        `[Harness Stage Guard] SECURITY: ${filePath} is a symlink, treating as missing. ` +
+        `This file should be a regular file. Possible bypass attempt detected.\n`
+      );
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const STAGES = ['PLAN', 'SETUP', 'EXECUTE', 'VERIFY', 'REVIEW', 'FEEDBACK'];
 const PLAN_FILE = path.join(ROOT, '.harness/current-plan.md');
 const TOOL_COUNT_FILE = path.join(ROOT, '.harness/tool-count.json');
@@ -293,7 +330,8 @@ process.stdin.on('end', () => {
     if (input.hook_event_name === 'TaskCompleted') {
       let currentStage = null;
       try {
-        currentStage = JSON.parse(fs.readFileSync(STAGE_FILE, 'utf8')).stage;
+        const raw = safeReadFileSync(STAGE_FILE);
+        if (raw) currentStage = JSON.parse(raw).stage;
       } catch {}
       if (['EXECUTE', 'VERIFY'].includes(currentStage)) {
         const taskId = input.task_id || '';
@@ -311,8 +349,10 @@ process.stdin.on('end', () => {
       return;
     }
 
-    if (!fs.existsSync(STAGE_FILE)) {
+    if (!safeFileExists(STAGE_FILE)) {
       // Bootstrap 口：允许 Write current-stage.json，但仍要校验 since
+      // 注意: 如果 STAGE_FILE 是 symlink, safeFileExists 返回 false → 视为不存在,
+      // 走 Bootstrap 口要求重新 Write (作为普通文件).
       const writePath = String(input.tool_input?.file_path || '');
       if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
         const parsed = validateStageWrite(input);  // 缺失/非法/偏差过大 → exit 2
@@ -334,7 +374,15 @@ process.stdin.on('end', () => {
         shouldBlock = true;
       }
     } else {
-      const data = JSON.parse(fs.readFileSync(STAGE_FILE, 'utf8'));
+      const stageRaw = safeReadFileSync(STAGE_FILE);
+      if (stageRaw === null) {
+        // 读失败 (e.g. symlink) → 走 reminder 路径强制重新声明
+        process.stderr.write(REMINDER);
+        shouldBlock = true;
+        process.stdout.write(raw);
+        process.exit(2);
+      }
+      const data = JSON.parse(stageRaw);
 
       if (data.stage === 'OFF') {
         process.stderr.write(OFF_REMINDER);
