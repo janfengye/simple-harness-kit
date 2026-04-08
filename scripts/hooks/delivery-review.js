@@ -3,7 +3,7 @@
 
 /**
  * Delivery Review Hook — 交付前复盘提醒
- * @version 0.6.1
+ * @version 0.7.0
  * 触发: PreToolUse:Bash
  *
  * 当检测到打开交付物的命令时，提醒进行 5 项复盘检查。

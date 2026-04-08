@@ -48,7 +48,7 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | Read | ✓ | ✓ | PLAN 阶段放行 + PLAN directive，非 PLAN 注入阶段提醒 |
 | Grep | ✓ | ✓ | 同 Read |
 | Glob | ✓ | ✓ | 同 Read |
-| WebFetch | ✓ | ✓ | 官方 PreToolUse 工具，v0.6.2 加入 |
+| WebFetch | ✓ | ✓ | 官方 PreToolUse 工具，v0.7.0 加入 |
 | WebSearch | ✓ | ✓ | 同 WebFetch |
 
 "reminder only" 的表述不准确：即便是读类工具，首次调用依然会被拦截，非 PLAN 阶段也会注入阶段声明，只是不会"阻止工具执行"。
@@ -82,10 +82,10 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 | SessionStart | ✓ | ✓ | ✓ | harness-session-start.js | 新 session 初始化、重置陈旧 stage、输出 banner |
 | PreToolUse | ✓ | ✓ | ✓ | stage-guard / safety-guard / verification-gate / delivery-review / commit-check / agent-check / context-monitor | 核心拦截点 |
 | PostToolUse | ✓ | ✓ | ✓ | session-logger | 成功工具调用记录 |
-| PostToolUseFailure | ✓ | ✓ | ✓ | session-logger | 失败工具调用记录（v0.6.2 加入） |
-| TaskCompleted | ✓ | ✓ | ✓ | harness-stage-guard.js | 任务标记完成时在 EXECUTE/VERIFY 提醒检查证据（v0.6.3 迁移自 TaskUpdate matcher） |
-| StopFailure | ✓ | ✓ | ✓ | session-logger.js | API 错误结束（rate_limit / billing / server_error 等）记录到 session-log + observations（v0.6.3 加入 #25） |
-| SessionEnd | ✓ | ✓ | ✓ | session-end.js | session 结束时归档 observations.jsonl + 写结束标记（v0.6.3 加入 #26） |
+| PostToolUseFailure | ✓ | ✓ | ✓ | session-logger | 失败工具调用记录（v0.7.0 加入） |
+| TaskCompleted | ✓ | ✓ | ✓ | harness-stage-guard.js | 任务标记完成时在 EXECUTE/VERIFY 提醒检查证据（v0.7.0 迁移自 TaskUpdate matcher） |
+| StopFailure | ✓ | ✓ | ✓ | session-logger.js | API 错误结束（rate_limit / billing / server_error 等）记录到 session-log + observations（v0.7.0 加入 #25） |
+| SessionEnd | ✓ | ✓ | ✓ | session-end.js | session 结束时归档 observations.jsonl + 写结束标记（v0.7.0 加入 #26） |
 | Stop | ✓ | ✓ | — | delivery-gate.js | 交付前拦截 EXECUTE（总是阻止）和 VERIFY（无证据时阻止） |
 
 **init-prompt.md 为什么没有 Stop**: init-prompt 的 settings.json 示例明确定位为"最小配置"（见其第 89-91 行）。delivery-gate 是可选的交付守门，用户可根据需要追加，不属于最小集。不算漂移。

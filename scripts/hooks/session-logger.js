@@ -3,7 +3,7 @@
 
 /**
  * Session Logger Hook — 记录关键动作 + 结构化观察数据
- * @version 0.6.3
+ * @version 0.7.0
  * 触发:
  *   - PostToolUse:* (成功工具调用)
  *   - PostToolUseFailure (失败工具调用)

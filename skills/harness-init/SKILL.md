@@ -53,6 +53,13 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 
 完全遵循 init-prompt.md 的"必选 / 可选 / 定制"段落。`.claude/settings.json` 必须从 `templates/settings-json.tmpl` 派生（**不是从记忆里写**）。
 
+> **生成 settings.json 的两种策略 — 默认走更安全的那条**：
+>
+> - **(推荐) 从 `tests/required-wiring.json` 直接派生最小集** — 这是工程层的 single source of truth，只包含必选 wiring，不含 optional hooks。一行一行翻译成 `{event, matcher, hooks: [{type, command}]}` 即可。**优点**：默认安全，AI 不会"忘记删 optional"
+> - **(高级) 从 `templates/settings-json.tmpl` 复制后删 optional 条目** — template 包含 optional hooks (verification-gate / delivery-review / commit-check / agent-check / context-monitor / delivery-gate) 的预设 wiring。如果项目需要这些 hooks，按 init-prompt.md 的"可选组件"表判断保留哪些；其余必须删除。**风险**：AI 容易漏删，结果是 settings 引用了不存在的 hook 脚本（被 validate.sh E2 检查 catch，但多一次 round trip）
+>
+> 默认走第一种。只有当用户明确要求启用某个 optional hook 时，才走第二种并精确取舍。
+
 ### Step 4: 运行可执行守门
 
 ```bash

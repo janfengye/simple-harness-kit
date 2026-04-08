@@ -3,7 +3,7 @@
 
 /**
  * Session End Hook — session 结束时的收尾动作
- * @version 0.6.3
+ * @version 0.7.0
  * 触发: SessionEnd lifecycle event
  *
  * 职责:

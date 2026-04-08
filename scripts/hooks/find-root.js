@@ -3,7 +3,7 @@
 
 /**
  * find-root.js — 从 CWD 向上查找项目根目录（包含 .harness/ 的目录）
- * @version 0.6.1
+ * @version 0.7.0
  *
  * 解决问题: Hook 脚本用相对路径访问 .harness/ 等文件，但 process.cwd()
  * 可能在子目录（如 cd 到子仓库做 git 操作），导致路径解析错误。

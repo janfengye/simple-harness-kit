@@ -3,7 +3,7 @@
 
 /**
  * Agent Check Hook — 修复类 Agent 必须引用 Constraint ID
- * @version 0.6.1
+ * @version 0.7.0
  * 触发: PreToolUse:Agent
  *
  * 不阻止执行，但发出警告。

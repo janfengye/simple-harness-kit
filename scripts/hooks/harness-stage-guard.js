@@ -3,7 +3,7 @@
 
 /**
  * Harness Stage Guard — 强制新 session 声明 Harness 阶段 + 监听 TaskCompleted 提醒 VERIFY
- * @version 0.6.3
+ * @version 0.7.0
  * 触发:
  *   - PreToolUse:*（Bash, Edit, Write, Agent, Read, Grep, Glob, WebFetch, WebSearch, TaskUpdate）
  *   - TaskCompleted lifecycle event (v0.6.3 迁移自原 PreToolUse:TaskUpdate + status==completed 检测)

@@ -3,7 +3,7 @@
 
 /**
  * Harness Learn — 从 observations.jsonl 分析模式，生成 instinct
- * @version 0.6.1
+ * @version 0.7.0
  *
  * 纯本地分析，不调 AI，不启动后台进程。
  * 用法: node scripts/hooks/harness-learn.js [--report] [--promote]
