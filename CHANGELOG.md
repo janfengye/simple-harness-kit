@@ -10,6 +10,95 @@
 
 （暂无新条目）
 
+## [0.7.1] - 2026-04-08
+
+### Migration Notes for VH-09
+
+**🚨 Meta 约束仓库同步修复 — 所有 v0.7.0 使用者都应拉取**
+
+#### 故障表现
+
+- v0.7.0 及之前 release 中，kit 仓库的 `docs/constraints.md` **长期滞后于 dogfooding workspace** 的 `docs/constraints.md`
+- 具体缺失：`C-HOOK-06` / `C-GATE-04` / `C-GATE-05` / `C-GATE-05a` / `C-GATE-06` / `C-INIT-04`，整个 `VH-01..VH-08` 历史也不在 kit 仓库
+- `C-INIT-01` 等少数条目内容也和 workspace 版本不一致
+- 使用者 clone 或 pull kit 仓库时，看不到完整的 meta 约束历史
+
+#### 影响范围
+
+- **所有已经 clone 了 kit 仓库的用户**（包括 60+ 团队成员）
+- **不影响已经 init 的项目**：新项目 init 时拿到的是 `templates/constraints.md.tmpl`（空脚手架），本次修复不改这个文件
+- 影响的是"kit 维护者的 meta 约束参考"和"kit 仓库本身的 violation history 完整性"
+
+#### 何时需要升级
+
+- 如果你是 kit 维护者 / contributor / 要读 kit methodology 细节的人 —— **必须** `git pull`
+- 如果你只是 kit 使用者，已经 init 好项目正常工作 —— **不必须**，但建议 pull 以获取完整的 meta 约束参考
+
+#### 升级步骤
+
+```bash
+# Step 1: 拉取最新 kit
+cd ~/path/to/simple-harness-kit
+git fetch origin
+git checkout master
+git pull origin master
+git describe --tags  # 应当看到 v0.7.1
+
+# Step 2: （可选）读新补上的 meta 约束
+less docs/constraints.md  # 完整的 C-DOC/C-META/C-HOOK/C-TEST/C-GATE/C-INIT + VH-01..VH-09
+```
+
+**不需要改动任何已有项目的代码/配置**。本 release 是 kit 仓库 meta 文件的同步，不改 runtime 行为。
+
+#### 根因摘要
+
+Dogfooding feedback loop 最后一公里从未落地：
+
+1. `.claude/rules/feedback-workflow.md` F4 只说"写入 docs/constraints.md"，没说"如果是 kit-level 必须同步到 kit 仓库"
+2. `docs/release-process.md` 7 步 release 流程没有 "Step 0: Dogfooding sync gate"
+3. `tests/template-integrity.js` 13 个 T 检查全守 kit 内部自洽，没有守"workspace vs kit 仓库"的约束同步
+4. VH-08 的 C-INIT-04 教训只覆盖 kit 内部副本，没扩展到"workspace vs kit 仓库"这对更外层副本
+5. 本次 release 的作者（AI session）早期把"同步 constraints"当作"20 分钟文档同步"的治标任务
+
+完整根因分析见 [docs/constraints.md](docs/constraints.md) 的 VH-09 条目。
+
+#### 防退化保证（本 release 的核心）
+
+v0.7.1 是**首次执行新 release-process 的 release**。新流程包含：
+
+- **Step 0: Dogfooding Feedback Sync** — release 前强制跑 `tests/template-integrity.js`，`T10` 和 `T11` 必须 PASS 才能进 Step 1
+- **T10**: workspace `docs/constraints.md` 的 kit-level 约束（C-DOC/META/HOOK/TEST/GATE/INIT/SKILL 前缀）和 VH-* 必须在 kit `docs/constraints.md` 中存在
+- **T11**: workspace `.claude/rules/*.md`（5 个核心 rules）必须有对应 `templates/rules/*.md.tmpl`
+- **F4.3**: `methodology/08-feedback-loop.md` 和 `.claude/rules/feedback-workflow.md` 的 F4 步骤拆分为 F4.1 (写入本地) + F4.2 (判断 scope) + F4.3 (kit 维护者必须同步 kit 仓库)
+- **C-META-04**: 新约束强制 workspace ↔ kit 同步义务
+
+本 v0.7.1 release 的 Step 0 实际执行结果：T10 + T11 全 PASS，122/122 测试通过。
+
+### Added
+
+- **`tests/template-integrity.js` 新增 T10 + T11 守门 (#C-META-04, VH-09 fix)** — 检测 workspace vs kit 仓库的 constraints.md 和 templates/rules 同步。反退化实测通过：手动删 kit C-META-04 → T10 立即 FAIL → 恢复 PASS (9c74a1b)
+- **`docs/constraints.md` 新增 C-META-04** — kit-level 约束和 rules 必须 workspace ↔ kit 同步，由 T10/T11 工程层守门 + F4.3 规则层守门 + Step 0 流程层守门 (9c74a1b)
+- **`docs/constraints.md` 新增 VH-09** — 本次 drift 的完整历史记录（5 个失效模式）(9c74a1b)
+- **`templates/rules/commit-standards.md.tmpl` 新建** — 之前 workspace 有 commit-standards.md 但 kit 缺 template，T11 首次运行 catch 到此缺失 (9c74a1b)
+
+### Changed
+
+- **`docs/constraints.md` 完整重写** — 对齐 workspace 最新状态，补全缺失的 C-HOOK-06 / C-GATE-04/05/05a/06 / C-INIT-04 和 VH-01..VH-08 (9c74a1b)
+- **`docs/release-process.md` 加 Step 0** — "Dogfooding Feedback Sync"，release 前必须跑 T10/T11 PASS 才能进 Step 1 (9c74a1b)
+- **`methodology/08-feedback-loop.md` F4 拆分为 F4.1/F4.2/F4.3** — 加 "判断约束 scope" 和 "kit 维护者场景必须同步 kit 仓库" 子段，加 VH-09 背景说明 (9c74a1b)
+- **`templates/rules/feedback-workflow.md.tmpl` 同步 F4 拆分** — 新 init 的 kit 维护者 workspace 也拿到 F4.1/F4.2/F4.3 结构 (9c74a1b)
+
+### Fixed
+
+- **VH-09: Dogfooding feedback loop 最后一公里缺失 drift** — workspace 产出的 6 条 meta 约束和 VH-01..VH-08 之前只写入 workspace 没同步 kit 仓库。本 release 一次性同步 + 加 T10/T11 守门防再发生 + 改 release-process / feedback-workflow / 08-feedback-loop.md 流程补丁 (9c74a1b)
+
+### Notes
+
+- 本 release 只改 kit 仓库的 meta 文件（`docs/constraints.md` / `docs/release-process.md` / `methodology/08-feedback-loop.md` / `templates/rules/*.md.tmpl` / `tests/template-integrity.js`），**不改任何 hook 脚本 runtime 行为**
+- hook `@version` 未 bump（保持 0.7.0）
+- 是 v0.7.0 的补丁，PATCH bump 符合 SemVer
+- **首次执行新 release-process Step 0**（Dogfooding Feedback Sync gate），T10/T11 PASS
+
 ## [0.7.0] - 2026-04-08
 
 ### Migration Notes for VH-08
