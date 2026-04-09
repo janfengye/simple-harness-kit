@@ -674,6 +674,36 @@ function runTemplateIntegrityTests() {
     if (errors.length > 0) return errors.join(' | ');
   });
 
+  // ── T15: qa-standards.md.tmpl 含必需行为指令 (Issue #1 / VH-11) ──
+  // 背景: 用户 SJF 报告 v0.7.x init 后的 qa-standards.md 是骨架占位符,
+  // 缺少 TDD 铁律 / 5 层金字塔 / Santa / Spec Review 等行为指令.
+  // AI 读 rules/ 时没看到 "NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST"
+  // → 不做 TDD → 不写测试 → 代码质量断崖.
+  // T15 检查模板本身 (不是 init 后的派生文件) 含必需行为短语, 防止模板退化.
+  check('qa-standards.md.tmpl 含必需行为指令 (Issue #1 / VH-11)', () => {
+    const tmplPath = path.join(KIT_ROOT, 'templates', 'rules', 'qa-standards.md.tmpl');
+    if (!fs.existsSync(tmplPath)) return 'qa-standards.md.tmpl 不存在';
+    const content = fs.readFileSync(tmplPath, 'utf8');
+
+    const REQUIRED = [
+      { needle: 'NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST', label: 'TDD 铁律' },
+      { needle: 'Layer 1', label: 'Layer 1 Agent Self-Verification' },
+      { needle: 'Layer 2', label: 'Layer 2 Verification Loop' },
+      { needle: 'Layer 3', label: 'Layer 3 Spec Compliance Review' },
+      { needle: 'Layer 4', label: 'Layer 4 Santa Method' },
+      { needle: 'Layer 5', label: 'Layer 5 Human Final Review' },
+      { needle: 'VERIFICATION REPORT', label: 'VERIFICATION REPORT 输出格式' },
+      { needle: 'Reviewer', label: 'Reviewer ≠ Author 要求' },
+      { needle: 'pass@1', label: '量化指标 pass@1' },
+    ];
+
+    const errors = [];
+    for (const { needle, label } of REQUIRED) {
+      if (!content.includes(needle)) errors.push(`缺少: ${label} ("${needle}")`);
+    }
+    if (errors.length > 0) return errors.join(' | ');
+  });
+
   const pass = results.filter(r => r.ok).length;
   const fail = results.length - pass;
   return { pass, fail, results };

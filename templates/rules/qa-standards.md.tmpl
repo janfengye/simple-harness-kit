@@ -1,28 +1,46 @@
-# QA 验收量化标准 / QA Standards
+# QA 标准
 
-> 根据项目实际情况定制指标和阈值。
+## 5 层 QA 金字塔
 
-## 核心指标
+```
+┌─────────────────────────────────────────────────────┐
+│ Layer 5: Human Final Review（人工最终审查）           │
+│   只看报告 + 关键决策，5 项交付前复盘                │
+├─────────────────────────────────────────────────────┤
+│ Layer 4: Santa Method（AI 对抗验证）                 │
+│   两个独立 Reviewer Agent 同时检查                    │
+├─────────────────────────────────────────────────────┤
+│ Layer 3: Spec Compliance Review（AI 规格审查）        │
+│   独立 Agent 对照需求规格逐项检查                     │
+├─────────────────────────────────────────────────────┤
+│ Layer 2: Verification Loop（自动化工具检查）           │
+│   Build → Type Check → Lint → Test → Security → Diff │
+├─────────────────────────────────────────────────────┤
+│ Layer 1: Agent Self-Verification（Agent 自验）        │
+│   TDD 红绿重构 + 实现后立即自验                       │
+└─────────────────────────────────────────────────────┘
+```
 
-| 指标 | 阈值 | 度量方法 |
-|------|------|---------|
-| 测试覆盖率 | ≥ {{80}}% | `{{测试覆盖率命令}}` |
-| 构建成功 | exit code 0 | `{{构建命令}}` |
-| Lint 错误 | 0 | `{{lint 命令}}` |
-| 类型错误 | 0 | `{{类型检查命令}}` |
-| 安全扫描 | 0 critical | `grep -rn "sk-\|api_key\|password" {{源码目录}}/` |
-| {{自定义指标}} | {{阈值}} | {{命令}} |
+## Layer 1: Agent Self-Verification
 
-## QA Agent 报告格式
+**谁执行：** 实现任务的 Agent 自己
+**何时执行：** 每个任务完成后立即执行
 
-每个检查项必须报告：
-1. **PASS / FAIL** — 基于阈值判断
-2. **量化数值** — 具体数字
-3. **具体问题描述** — FAIL 时必须说明原因
+1. TDD 红绿重构循环：
+   - 先写失败测试（RED）
+   - 写最少代码通过测试（GREEN）
+   - 重构（REFACTOR）
+2. 实现完成后运行全部相关测试
+3. 检查自己的改动是否引入新的 warning/error
 
-**不接受模糊评价。** "看起来不错"不是合格的 QA 报告。
+**Gate 条件：** 测试通过 + 无新 warning
 
-## Verification Loop 检查项
+**铁律：** NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+
+## Layer 2: Verification Loop
+
+**谁执行：** 自动化工具（不依赖 LLM 判断）
+**何时执行：** Agent 自验通过后，进入下一层前
 
 ```
 Phase 1: Build        {{构建命令}}
@@ -33,23 +51,103 @@ Phase 5: Security     基础秘钥扫描 + {{安全工具}}
 Phase 6: Diff         git diff --stat
 ```
 
-## 验收闭环
+**Gate 条件：** 6 项全部 PASS
+
+**输出格式：**
 
 ```
-Agent 修复 → 重新构建
-    ↓
-QA Agent 检查 → 量化报告
-    ↓
-不达标 → 分析 → 升级规则 → 重新派 Agent
-    ↓
-全部达标 → 交付前复盘 → 交付
+VERIFICATION REPORT
+===================
+Build:     [PASS/FAIL]
+Types:     [PASS/FAIL] (N errors)
+Lint:      [PASS/FAIL] (N warnings)
+Tests:     [PASS/FAIL] (X/Y passed, Z% coverage)
+Security:  [PASS/FAIL] (N issues)
+Diff:      [N files changed, +X/-Y lines]
+
+Overall:   [READY/NOT READY]
 ```
 
-## 交付前复盘（Delivery Review）
+## Layer 3: Spec Compliance Review
 
-交付前必须回顾：
-1. **流程合规**：是否按 6 阶段 Loop 执行？
-2. **QA 标准**：各层量化指标是否达标？
-3. **需求完整**：所有需求是否全部处理？
-4. **规则升级**：新问题是否写入 constraints？
-5. **改进机会**：哪些步骤可以优化？
+**谁执行：** 独立的 Reviewer Agent（不是写代码的那个 Agent）
+**何时执行：** Verification Loop 全部 PASS 后
+
+1. Reviewer 收到：需求规格 + Agent 的代码变更
+2. 逐项对照规格检查
+3. 输出结构化报告
+
+**关键设计：Reviewer ≠ Author**
+
+写代码的 Agent 和做 review 的 Agent 必须是不同的 Agent 实例（独立上下文）。这消除了 author-bias。
+
+**Gate 条件：** 所有规格项 PASS
+
+## Layer 4: Santa Method（对抗验证）
+
+**谁执行：** 两个独立的 Reviewer Agent（互相不知道对方的存在）
+**何时执行：** 高风险产出物、生产部署前、复杂逻辑变更
+
+```
+Phase 1: Make a List
+  Generator Agent 完成实现
+
+Phase 2: Check It Twice
+  Reviewer A 和 Reviewer B 独立审查
+
+Phase 3: Naughty or Nice
+  A passes AND B passes → NICE → 进入 Layer 5
+  否则 → NAUGHTY → 进入 Fix Cycle
+
+Phase 4: Fix Until Nice
+  收集所有 issue → Fix Agent 修复 → 重新双 Review
+  最多 3 轮。超过 3 轮 → 升级给人工处理
+```
+
+**关键不变量：**
+- 上下文隔离：两个 Reviewer 互不可见
+- 相同 rubric：评审标准一致
+- 都必须通过：一个发现问题就算 NAUGHTY
+- Fresh Agent per round：每轮修复后必须用全新 Reviewer Agent 重审
+
+**何时跳过 Layer 4：**
+- 低风险改动（文档、配置、格式化）
+- 已有充分的自动化测试覆盖
+- 跳过时需要记录降级决策
+
+## Layer 5: Human Final Review
+
+**谁执行：** 人
+**何时执行：** Layer 4 通过后（或 Layer 3 通过后如果跳过了 Layer 4）
+
+交付前 5 项复盘清单：
+
+1. **流程合规**：是否按 6 阶段 Loop 执行？是否有跳过的阶段？
+2. **QA 达标**：各层 QA 报告是否完整？量化指标是否达标？
+3. **需求完整**：用户/产品的所有需求点是否全部处理？
+4. **规则升级**：过程中发现的新问题是否已写入 constraints.md？
+5. **改进机会**：哪些步骤下次可以优化？
+
+## 量化指标体系
+
+| 指标 | 含义 | 目标 |
+|------|------|------|
+| pass@1 | 一次就通过的比例 | >70% |
+| pass@3 | 三次内通过的比例 | >90% |
+| First-pass rate | Santa 第一轮通过率 | >70% |
+| Mean iterations | 平均修复轮数 | <1.5 |
+| Escape rate | 上线后发现问题 | 0 |
+| Coverage | 测试覆盖率 | ≥ {{80}}% |
+
+## 核心指标（项目定制）
+
+| 指标 | 阈值 | 度量方法 |
+|------|------|---------|
+| 测试覆盖率 | ≥ {{80}}% | `{{测试覆盖率命令}}` |
+| 构建成功 | exit code 0 | `{{构建命令}}` |
+| Lint 错误 | 0 | `{{lint 命令}}` |
+| 类型错误 | 0 | `{{类型检查命令}}` |
+| 安全扫描 | 0 critical | `grep -rn "sk-\|api_key\|password" {{源码目录}}/` |
+
+> 上面的 `{{占位符}}` 在 init 时由 AI 按项目实际情况替换。
+> 如果项目暂未配置某工具（如 lint），标注"待配置"并在首次 EXECUTE 前补齐。
