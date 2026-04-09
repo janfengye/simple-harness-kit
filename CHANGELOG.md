@@ -6,9 +6,96 @@
 
 ## [Unreleased]
 
-> 这些变更已 commit 但未打 tag。下次发版时整理到具体版本号下。版本号由 release 任务决定（参考 [docs/release-process.md](docs/release-process.md)）。
+> 这些变更已 commit 但未打 tag。下次发版时整理到具体版本号下。
 
 （暂无新条目）
+
+## [0.7.2] - 2026-04-09
+
+### Migration Notes for VH-10
+
+**🚨 P0 修复 — 所有 v0.7.0 / v0.7.1 使用者 `/harness-init` 路径都应拉取**
+
+#### 故障表现
+
+v0.7.0 / v0.7.1 交付后用户连续反馈两个 P0 低级 bug:
+
+1. **问题 A（嵌套目录）**: `bash install.sh` 或 `bash update.sh` 第二次及以后执行，会在 `~/.claude/skills/harness-init/` 里产生 `harness-init/harness-init/SKILL.md` 嵌套。根因：`install.sh` / `update.sh` 第 63 行的 `cp -r "$src" "$dst/$name"` 在 dst 已存在时的 POSIX 行为是"把 source 作为 subdir 嵌入 dst"。
+
+2. **问题 B（cwd-relative 路径失效）**: `skills/harness-init/SKILL.md` 硬编码 `simple-harness-kit/templates/settings-json.tmpl` 类 cwd-relative 路径，60+ 用户的 cwd 不是 kit 父目录（例如 kit 在 D 盘），`/harness-init` skill 启动即报 "无法找到 simple-harness-kit"。
+
+#### 影响范围
+
+- **问题 A 影响**: 所有跑过二次 `install.sh` 或 `update.sh` 的用户（包括本地开发、CI、升级场景），skill 目录损坏，新 session 找不到 SKILL.md
+- **问题 B 影响**: 所有 cwd 不是 kit 父目录的用户（绝大多数真实场景）， `/harness-init` slash command 路径入口直接不可用
+- **不影响已经 init 好、只用 hooks 的项目** — 老 hook 脚本不受影响，只影响用 skill 入口的新 init / 更新流程
+
+#### 升级步骤
+
+```bash
+# Step 1: 拉取最新 kit
+cd /path/to/simple-harness-kit
+git fetch origin
+git checkout master
+git pull origin master
+git describe --tags  # 应当看到 v0.7.2
+
+# Step 2: 如果之前有嵌套目录损坏，手动清理再重装
+rm -rf ~/.claude/skills/harness-init
+bash install.sh   # 幂等安装，新版本不会再产生嵌套
+
+# Step 3: 新 session 里跑 /harness-init 就能正常工作
+```
+
+#### Added
+
+- `skills/harness-init/resources/` — skill 自包含 4 个关键资源副本（方案 C），`SKILL.md` 用 `./resources/*` skill-relative 路径引用，彻底解耦 cwd 假设
+- `skills/harness-init/SKILL.md` Step 0 — kit 仓库定位逻辑（环境变量优先 + 结构完整性校验 + 显式用户确认），防 supply-chain 影子仓库欺骗
+- `tests/scripts/` — 全新 7 维度脚本化测试矩阵（100% 不依赖 AI 能力，可在任意 CI 跑）:
+  - `01-script-idempotency.sh` install/update 幂等性
+  - `02-skill-path-resolution.sh` SKILL.md 中所有路径在真实用户 cwd 下可解析（含 kit-internal 白名单 + 路径穿越 `..` 检测 + 绝对路径存在性校验）
+  - `03-full-e2e.sh` install → 模拟 init 链路
+  - `04-dir-structure-invariant.sh` manifest 不变式
+  - `05-mutation-test.sh` 9 类 bug 注入反测（M1-M9 双向证明）
+  - `06-path-style-matrix.sh` plain/空格/中文/超长路径 × 维度 1+4
+  - `07-scope-branches.sh` --scope personal / project 两种路径
+  - `run-all.sh` 主 runner + meta L1（语法）/ L2（断言计数）/ L6（multi-shell）
+- `tests/template-integrity.js` T12 — `skills/harness-init/resources/` 与 kit 源文件 byte-identical 同步守门
+- `tests/template-integrity.js` T13 — SKILL.md Step 0 含 C-SKILL-02 trust model 守门静态检查
+- `docs/constraints.md` JC-07 — VH-10 + C-SKILL-01 + **C-SKILL-02 (trust model)** + C-TEST-04 + C-TEST-05 + C-TEST-06 + C-HOOK-07 六条新约束
+- `docs/release-process.md` Step 0.5 — Scripted Test Matrix 强制 gate，release 前必须 `bash tests/scripts/run-all.sh` 全 PASS
+- `methodology/04-qa-pyramid.md` Layer 2 铁律 — "实弹测试不得绕过被测组件"
+- `methodology/08-feedback-loop.md` — VH-10 教训段 + F 层铁律（5 条脚本化测试硬要求）
+
+### Fixed
+
+- **`install.sh` + `update.sh` 幂等性** (VH-10 问题 A): `cp -r "$src" "$dst/$name"` 改为 `rm -rf "$dst/$name" && cp -r "$src" "$dst/$name"`，二次及多次执行不再产生嵌套目录
+- **`skills/harness-init/SKILL.md` 路径解析** (VH-10 问题 B): 硬编码 `simple-harness-kit/...` 路径全部改为 `./resources/*` (skill-relative) 或 `$KIT_ROOT/*` (Step 0 定位的变量)
+- **`templates/rules/commit-standards.md.tmpl`** + **`templates/rules/feedback-workflow.md.tmpl`**: 清除派生到用户项目的 cwd-relative kit 路径引用（用户项目下这些路径无法解析）
+
+### Changed
+
+- `methodology/15-hook-coverage-matrix.md` + `init-prompt.md`: 把"一致性检查清单"和"Codex 用户示例"里的 `simple-harness-kit/xxx` 硬编码改为相对 kit 根目录的说明
+
+### Constraint 系统
+
+- 新增约束 (6)：C-SKILL-01 / C-SKILL-02 / C-TEST-04 / C-TEST-05 / C-TEST-06 / C-HOOK-07
+- 扩展约束 (1)：C-GATE-02 加入"3 个无父子关系随机 tmp 目录"要求 + "sub-agent 实验不得预置被测组件资源路径"
+- 新增 VH：VH-10（含完整 5 层失效分析：shell 幂等性盲区 / skill 路径解析盲区 / dogfooding 环境假象 / sub-agent 实验假 PASS / E2E 入口盲区延续）
+- workspace (`ths-harness`) ↔ kit 两份 constraints.md 同步双写（C-META-04 守门）
+
+### 质量工程成果
+
+- 测试: **125 passed, 0 failed, 125 total**（107 hook scenarios + **17 template-integrity 含新 T12/T13** + 1 Scripted Matrix 7 维度聚合）
+- 脚本化矩阵: **7 / 7 维度**, 70 个 L2 断言
+- Mutation: **21 / 21** (M1-M9 bug 注入双向证明 + 2 baseline)
+- 跨模型交叉验收: 4 轮, Claude Opus 4.6 实现 + Sub-agent A spec(15/15) + Sub-agent B test-replay(APPROVE WITH NOTES, 修 3 盲区) + Codex gpt-oss-120b(round 1/2 找 1 盲区) + **Codex gpt-5.4(round 3 找 3 block 级缺陷, round 4 零发现 APPROVE)**
+- 收敛曲线: 每轮 cross-review 发现递减，round 4 零发现 = release gate 关闭
+
+### v0.7.3 backlog (本 release 不包含)
+
+- H5/H6 theoretical: `$HOME/...` 变量路径解析后存在性校验 / symlink 跟随 fs.realpath
+- Codex round 4 未发现新 bug，但以上 2 条是 gpt-oss-120b round 2 提出的低概率 edge case
 
 ## [0.7.1] - 2026-04-08
 
