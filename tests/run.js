@@ -354,9 +354,41 @@ for (const r of tpl.results) {
 }
 console.log(`\n  ${tpl.pass} passed, ${tpl.fail} failed, ${tpl.results.length} total\n`);
 
-const totalFailed = failed + tpl.fail;
-const totalTests = scenarios.length + tpl.results.length;
+// ── Scripted Test Matrix (tests/scripts/run-all.sh) ──
+// 维度 1-7 install/update/skill-path/e2e/invariant/mutation/pathstyle/scope
+// 纯 shell 测试, 不依赖 Node 测试框架. 结果作为 run.js 总 exit code 的一部分.
+//
+// 本块用于 catch 的问题: install.sh / update.sh / skill 安装结构 / SKILL.md 路径
+// 层面的 bug (VH-10 问题 A + B). hook scenarios 和 template-integrity 都在静态
+// + hook runtime 层, 但不会实际跑 install.sh, 所以这一层是必要补充.
+let scriptedFailed = 0;
+let scriptedTotal = 0;
+try {
+  const scriptsRunner = path.resolve(__dirname, 'scripts', 'run-all.sh');
+  if (fs.existsSync(scriptsRunner)) {
+    console.log('  Scripted Test Matrix (tests/scripts/run-all.sh)\n');
+    const res = require('child_process').spawnSync('bash', [scriptsRunner], {
+      stdio: 'inherit',
+      timeout: 10 * 60 * 1000, // 10 分钟上限
+    });
+    scriptedTotal = 1; // 作为一个整体 section
+    if (res.status !== 0) {
+      scriptedFailed = 1;
+      console.log(`\n  Scripted Matrix FAIL (exit ${res.status})\n`);
+    } else {
+      console.log(`\n  Scripted Matrix PASS\n`);
+    }
+  } else {
+    console.log(`  Scripted Matrix SKIP (runner 不存在: ${scriptsRunner})\n`);
+  }
+} catch (e) {
+  scriptedFailed = 1;
+  console.log(`  Scripted Matrix FAIL: ${e.message}\n`);
+}
+
+const totalFailed = failed + tpl.fail + scriptedFailed;
+const totalTests = scenarios.length + tpl.results.length + scriptedTotal;
 console.log(`  ══════════════════════════════`);
-console.log(`  总计: ${passed + tpl.pass} passed, ${totalFailed} failed, ${totalTests} total\n`);
+console.log(`  总计: ${passed + tpl.pass + (scriptedTotal - scriptedFailed)} passed, ${totalFailed} failed, ${totalTests} total\n`);
 
 process.exit(totalFailed > 0 ? 1 : 0);

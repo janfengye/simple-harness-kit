@@ -327,13 +327,16 @@ function runTemplateIntegrityTests() {
     const content = fs.readFileSync(HARNESS_INIT_SKILL, 'utf8');
 
     // (a) 必须显式提到要读取 init-prompt.md
+    // VH-10 方案 C 之后, SKILL.md 可以引用 ./resources/init-prompt.md (skill-relative)
+    // 或 init-prompt.md (叙述中). 只要出现 init-prompt.md 字面即可.
     if (!/init-prompt\.md/.test(content)) {
       return 'SKILL.md 未引用 init-prompt.md (违反 C-INIT-04)';
     }
 
-    // (b) 必须显式提到要读取 templates/settings-json.tmpl
-    if (!/templates\/settings-json\.tmpl/.test(content)) {
-      return 'SKILL.md 未引用 templates/settings-json.tmpl (违反 C-INIT-04)';
+    // (b) 必须显式提到要读取 settings-json.tmpl
+    // 允许 templates/settings-json.tmpl 或 VH-10 方案 C 的 ./resources/settings-json.tmpl
+    if (!/settings-json\.tmpl/.test(content)) {
+      return 'SKILL.md 未引用 settings-json.tmpl (违反 C-INIT-04)';
     }
 
     // (c) 必须显式提到要读取 required-wiring.json
@@ -536,6 +539,103 @@ function runTemplateIntegrityTests() {
     if (missing.length > 0) {
       return missing.join(' | ');
     }
+  });
+
+  // ── T12: skills/harness-init/resources/ 与 kit 源文件 byte-identical (VH-10 方案 C 同步守门) ──
+  // VH-10 方案 C: skill 自包含 resources/ 避免 cwd-relative 路径问题. 这 4 个 resources/
+  // 是 kit 源文件的副本, 必须保持精确同步. 用 byte-identical 对比防止漂移.
+  //
+  // 映射:
+  //   skills/harness-init/resources/init-prompt.md          == init-prompt.md
+  //   skills/harness-init/resources/settings-json.tmpl      == templates/settings-json.tmpl
+  //   skills/harness-init/resources/required-wiring.json    == tests/required-wiring.json
+  //   skills/harness-init/resources/hook-coverage-matrix.md == methodology/15-hook-coverage-matrix.md
+  //
+  // 任一 FAIL 即说明 resources/ 已漂移, 必须同步 (一般是修改源后忘了同步 resources/ 副本).
+  check('sync: skills/harness-init/resources/ 与 kit 源 byte-identical (VH-10 方案 C)', () => {
+    const SKILL_RES = path.join(KIT_ROOT, 'skills', 'harness-init', 'resources');
+    const pairs = [
+      {
+        res: path.join(SKILL_RES, 'init-prompt.md'),
+        src: path.join(KIT_ROOT, 'init-prompt.md'),
+        label: 'init-prompt.md',
+      },
+      {
+        res: path.join(SKILL_RES, 'settings-json.tmpl'),
+        src: path.join(KIT_ROOT, 'templates', 'settings-json.tmpl'),
+        label: 'settings-json.tmpl',
+      },
+      {
+        res: path.join(SKILL_RES, 'required-wiring.json'),
+        src: path.join(KIT_ROOT, 'tests', 'required-wiring.json'),
+        label: 'required-wiring.json',
+      },
+      {
+        res: path.join(SKILL_RES, 'hook-coverage-matrix.md'),
+        src: path.join(KIT_ROOT, 'methodology', '15-hook-coverage-matrix.md'),
+        label: 'hook-coverage-matrix.md',
+      },
+    ];
+
+    const errors = [];
+    for (const p of pairs) {
+      if (!fs.existsSync(p.res)) {
+        errors.push(`resources 文件缺失: ${p.label} (应在 ${path.relative(KIT_ROOT, p.res)})`);
+        continue;
+      }
+      if (!fs.existsSync(p.src)) {
+        errors.push(`kit 源文件缺失: ${p.label} (应在 ${path.relative(KIT_ROOT, p.src)})`);
+        continue;
+      }
+      const resBuf = fs.readFileSync(p.res);
+      const srcBuf = fs.readFileSync(p.src);
+      if (!resBuf.equals(srcBuf)) {
+        errors.push(
+          `drift: ${p.label} — ${path.relative(KIT_ROOT, p.res)} != ${path.relative(KIT_ROOT, p.src)}. ` +
+            `同步方向: 将 kit 源的最新内容 cp 到 resources/ (源是 single source of truth)`
+        );
+      }
+    }
+    if (errors.length > 0) return errors.join(' | ');
+  });
+
+  // ── T13: skills/harness-init/SKILL.md Step 0 含 C-SKILL-02 trust model 守门 ──
+  // Codex gpt-5.4 round 3 F3 发现: Step 0 "cwd 向上搜索 simple-harness-kit/" 逻辑
+  // 可被影子仓库欺骗 (用户在 /tmp/untrusted 下工作, 攻击者在该目录种伪 kit, 被静默
+  // 信任). C-SKILL-02 要求 Step 0 必须包含 (a) 结构完整性校验 (b) 显式用户确认.
+  // 本 T 静态检查 SKILL.md 里存在这些关键守门短语, 防止未来"简化 Step 0"回归.
+  check('SKILL.md Step 0 含 C-SKILL-02 trust model 守门 (VH-10 gpt-5.4 F3)', () => {
+    const skillMd = path.join(KIT_ROOT, 'skills', 'harness-init', 'SKILL.md');
+    if (!fs.existsSync(skillMd)) return 'SKILL.md 不存在';
+    const content = fs.readFileSync(skillMd, 'utf8');
+
+    const REQUIRED_PHRASES = [
+      { needle: 'C-SKILL-02', label: 'C-SKILL-02 ID 引用' },
+      { needle: 'SIMPLE_HARNESS_KIT_ROOT', label: '环境变量优先条目' },
+      { needle: '结构完整性校验', label: '结构完整性校验要求' },
+      { needle: 'methodology/00-overview.md', label: '完整性校验锚点 1' },
+      { needle: 'templates/settings-json.tmpl', label: '完整性校验锚点 2' },
+      { needle: 'tests/required-wiring.json', label: '完整性校验锚点 3' },
+      { needle: '显式', label: '显式用户确认要求 (显式)' },
+      { needle: 'supply-chain', label: 'supply-chain 风险标注' },
+    ];
+    const FORBIDDEN_PHRASES = [
+      // 禁止描述"自动向上查找 + 静默使用" — 必须明确说这是被禁止的
+      // (如果未来重构去掉了禁止描述, T13 FAIL)
+      { needle: '自动.*向上查找.*静默', label: '禁止 "自动向上查找+静默" 的明确描述', regex: true },
+    ];
+
+    const errors = [];
+    for (const { needle, label } of REQUIRED_PHRASES) {
+      if (!content.includes(needle)) errors.push(`缺少必需短语: ${label} ("${needle}")`);
+    }
+    for (const { needle, label, regex } of FORBIDDEN_PHRASES) {
+      // FORBIDDEN_PHRASES 这里实际是"必须出现在禁止性上下文中的描述"
+      // 用简化方式: 至少有一处"禁止"和"自动"+"向上"关键词组合
+      const hasWarning = /禁止.*自动.*向上查找/s.test(content) || /不得.*自动.*向上查找/s.test(content);
+      if (!hasWarning) errors.push(`缺少明确警告: ${label}`);
+    }
+    if (errors.length > 0) return errors.join(' | ');
   });
 
   const pass = results.filter(r => r.ok).length;
