@@ -613,7 +613,7 @@ function runTemplateIntegrityTests() {
       { needle: 'C-SKILL-02', label: 'C-SKILL-02 ID 引用' },
       { needle: 'SIMPLE_HARNESS_KIT_ROOT', label: '环境变量优先条目' },
       { needle: '结构完整性校验', label: '结构完整性校验要求' },
-      { needle: 'methodology/00-overview.md', label: '完整性校验锚点 1' },
+      { needle: 'methodology/00-philosophy.md', label: '完整性校验锚点 1 (methodology root)' },
       { needle: 'templates/settings-json.tmpl', label: '完整性校验锚点 2' },
       { needle: 'tests/required-wiring.json', label: '完整性校验锚点 3' },
       { needle: '显式', label: '显式用户确认要求 (显式)' },
@@ -634,6 +634,42 @@ function runTemplateIntegrityTests() {
       // 用简化方式: 至少有一处"禁止"和"自动"+"向上"关键词组合
       const hasWarning = /禁止.*自动.*向上查找/s.test(content) || /不得.*自动.*向上查找/s.test(content);
       if (!hasWarning) errors.push(`缺少明确警告: ${label}`);
+    }
+    if (errors.length > 0) return errors.join(' | ');
+  });
+
+  // ── T14: SKILL.md Step 0 完整性校验锚点在 kit 里必须真实存在 ──
+  // 背景: VH-10 阶段 4 真实用户场景验收发现: v0.7.2 SKILL.md 里写的锚点
+  // `methodology/00-overview.md` 实际不存在 (真名是 00-philosophy.md).
+  // T13 只检查 SKILL.md 里是否**含有**这个字符串, 没检查**字符串指向的文件是否真的存在**.
+  // 这是 VH-10 教训的元层重演 — "静态内容检查 ≠ 真实验证".
+  // T14 把 SKILL.md 里声明的每个锚点都在 kit 文件系统里真实 stat 一次.
+  check('SKILL.md Step 0 完整性校验锚点在 kit 里真实存在 (VH-10 阶段 4 发现)', () => {
+    const skillMd = path.join(KIT_ROOT, 'skills', 'harness-init', 'SKILL.md');
+    if (!fs.existsSync(skillMd)) return 'SKILL.md 不存在';
+    const content = fs.readFileSync(skillMd, 'utf8');
+
+    // 从 SKILL.md 提取 Step 0 里所有形如 `$CAND/xxx.xxx` 的锚点
+    // 格式: `$CAND/<path>`（反引号内）
+    const anchorRe = /`\$CAND\/([^`\n]+)`/g;
+    const anchors = new Set();
+    let m;
+    while ((m = anchorRe.exec(content)) !== null) {
+      const rel = m[1].trim();
+      // 排除目录级声明 (以 / 结尾) — 那些是 "$CAND/scripts/hooks/" 类, 不是具体文件
+      if (!rel.endsWith('/')) anchors.add(rel);
+    }
+
+    if (anchors.size === 0) {
+      return 'Step 0 没有声明任何 `$CAND/...` 锚点 — 结构完整性校验形同虚设';
+    }
+
+    const errors = [];
+    for (const rel of anchors) {
+      const full = path.join(KIT_ROOT, rel);
+      if (!fs.existsSync(full)) {
+        errors.push(`锚点不存在: ${rel} (SKILL.md 声明但 kit 里找不到)`);
+      }
     }
     if (errors.length > 0) return errors.join(' | ');
   });

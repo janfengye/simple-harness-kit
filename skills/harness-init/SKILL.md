@@ -28,7 +28,7 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 3. **Rules 文件不能凭记忆生成**。必须从 kit 仓库 `templates/rules/` 下的 `*.tmpl` 派生，做项目占位符替换。
 4. **必选/可选组件清单以 `./resources/init-prompt.md` 为权威**（skill-relative）。本文件不复述清单——任何看到必选项变化的人，都必须改 init-prompt.md，而不是改这里。
 5. **wiring（hook event/matcher 注册）以 `./resources/required-wiring.json` 为权威**（skill-relative）。这是工程层的 single source of truth，validate.sh 和 template-integrity 都从它派生。
-6. **生成完毕后必须运行 kit 仓库的 `tests/e2e-acceptance-validate.sh`**（定位方式见 Step 0），把完整输出贴到对话里。任何 FAIL 项必须修复后再宣称 init 完成。
+6. **生成完毕后必须做 Step 4 的 4 项用户层完整性检查**（C-SKILL-03），全部通过才可宣称 init 完成。**不要**默认跑 kit CI 工具 `tests/e2e-acceptance-validate.sh`（那是 kit 维护者用的 76 项全量检查，不是用户 flow）。用户如需深度验证可自行跑。
 
 任何"为了简化/适配/AI 觉得这样更好"而违反以上 6 条的行为，都是 bug，不是优化。
 
@@ -39,7 +39,7 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 ### Step 0: 定位 kit 仓库（只为 Step 3 的脚本/rule 拷贝 + Step 4 的 validate.sh）
 
 本 skill 已自包含 4 个关键资源（`./resources/` 下），Step 1 全部从 resources/ 读取。
-但 Step 3 需要把 kit 的 `scripts/hooks/*.js` 和 `templates/rules/*.tmpl` 拷贝到目标项目，Step 4 需要跑 `tests/e2e-acceptance-validate.sh`——这两步需要知道 kit 仓库在哪。
+但 Step 3 需要把 kit 的 `scripts/hooks/*.js` 和 `templates/rules/*.tmpl` 拷贝到目标项目——这一步需要知道 kit 仓库在哪。
 
 **定位顺序**（取第一个命中）：
 1. 环境变量 `SIMPLE_HARNESS_KIT_ROOT` 指向的目录（若用户显式设置，最可信）
@@ -48,14 +48,15 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 **禁止**（C-SKILL-02, VH-10 后加强的 trust model 规则）：
 - **不得**在用户当前 cwd 或其父目录自动"向上查找 `simple-harness-kit/`"然后静默使用。如果用户在 `/tmp/untrusted-project` 下工作，而该目录恰好有 `simple-harness-kit/` 子目录，自动信任这个"子目录" = supply-chain 攻击：恶意 kit 的 `install.sh` / `templates/rules/*.tmpl` / `scripts/hooks/*.js` 会被写入用户项目。必须用户显式确认。
 - **不得**假设第一个找到的 `simple-harness-kit/` 目录就是真的。**必须做结构完整性校验**：定位到候选路径 `$CAND` 后，先校验以下所有文件/目录都存在且非空：
-  - `$CAND/methodology/00-overview.md`（方法论根文档）
+  - `$CAND/methodology/00-philosophy.md`（方法论根文档，真实文件名）
   - `$CAND/templates/settings-json.tmpl`
   - `$CAND/tests/required-wiring.json`
   - `$CAND/tests/template-integrity.js`
   - `$CAND/scripts/hooks/` 下至少 5 个 `.js` 文件
   - `$CAND/CHANGELOG.md` 首行含 `# Changelog`
+  - `$CAND/init-prompt.md` 存在
 
-  任一不满足 → 拒绝使用该候选，回到定位流程 next priority。
+  这 7 个锚点都是 kit 长期稳定的文件。任一不满足 → 拒绝使用该候选，回到定位流程 next priority。
 
 - **必须**：除非 `SIMPLE_HARNESS_KIT_ROOT` 环境变量明确设置，否则**任何**自动定位的 kit 路径在使用前都要**显式告诉用户**："我打算用 `$CAND` 作为 kit 仓库，这是你的安装位置吗？(确认/否)"。得到用户确认后才继续 Step 3/4。如果用户不确认 → 询问绝对路径。
 
@@ -86,7 +87,6 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 拷贝 kit 脚本和 rule 模板到目标项目时，用 Step 0 定位到的 kit 根目录 `$KIT_ROOT`：
 - Hook 脚本源: `$KIT_ROOT/scripts/hooks/*.js`
 - Rule 模板源: `$KIT_ROOT/templates/rules/*.tmpl`
-- e2e 守门脚本: `$KIT_ROOT/tests/e2e-acceptance-validate.sh`
 
 > **生成 settings.json 的两种策略 — 默认走更安全的那条**：
 >
@@ -95,17 +95,26 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 >
 > 默认走第一种。只有当用户明确要求启用某个 optional hook 时，才走第二种并精确取舍。
 
-### Step 4: 运行可执行守门
+### Step 4: 验证 init 完整性（C-SKILL-03: 用户层最小集）
 
-```bash
-bash "$KIT_ROOT/tests/e2e-acceptance-validate.sh"
+生成产物后，做以下 **4 项用户层检查**（不跑 76 项 kit CI）:
+
+1. **必选文件存在**: `.claude/settings.json` / `.claude/rules/` 下 4 个必选 .md / `scripts/hooks/` 下必选 .js（至少 harness-stage-guard / harness-session-start / session-logger / safety-guard / find-root / session-end）/ `docs/constraints.md` / `CLAUDE.md`
+2. **settings.json JSON 有效**: `node -e "JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'))"`
+3. **hook 脚本存在**: settings.json 里每个 `command` 引用的 `scripts/hooks/xxx.js` 都有对应文件
+4. **CLAUDE.md 非空**: 大于 200 bytes
+
+全部通过 → 输出:
+
+```
+Harness init 完成 ✓
+下一步: 开新 session (当前 session 的 hook 不生效), 输入任务开始工作
+如需深度验证: bash $KIT_ROOT/tests/e2e-acceptance-validate.sh
 ```
 
-其中 `$KIT_ROOT` 来自 Step 0 定位结果。把完整输出（含每行 ✓ / ✗）贴到对话。任何 FAIL 项立刻修复后重新跑。
+**任何失败** → 输出失败项 + 修复 → 重新检查。
 
-### Step 5: 输出 init-prompt.md 中定义的完整性检查清单
-
-清单以 `./resources/init-prompt.md` 中的 "C-INIT-03" 段为准。本文件不复述清单。
+**禁止**默认跑 `tests/e2e-acceptance-validate.sh` 的 76 项全量 CI 输出（C-SKILL-03）。那是 kit 维护者的工具，不是用户 init flow 的组成部分。用户想跑就给路径让用户自己决定。
 
 ---
 

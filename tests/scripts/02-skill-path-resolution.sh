@@ -92,7 +92,7 @@ const KIT_INTERNAL_PREFIXES = [
   "tests/",
   "methodology/",
 ];
-const KIT_INTERNAL_CONTEXT_TOKENS = ["$KIT_ROOT", "kit 仓库", "kit 的", "kit-ref", "kit 根", "kit root"];
+const KIT_INTERNAL_CONTEXT_TOKENS = ["$KIT_ROOT", "kit 仓库", "kit 的", "kit-ref", "kit 根", "kit root", "kit CI", "kit 维护者"];
 
 // F2 Codex gpt-5.4 发现: 路径穿越 — .claude/../../../../tmp/pwn.md 起始匹配 .claude/
 // 但 .. 段逃逸. 任何含 .. 段的路径都禁止 (skill 内任何合法 path 都不需要 ..).
