@@ -35,7 +35,11 @@
 const fs = require('fs');
 const path = require('path');
 const findRoot = require('./find-root');
-const ROOT = findRoot();
+const ROOT_RAW = findRoot();
+// macOS /tmp → /private/tmp symlink 导致 path.resolve 和 Claude Code 的绝对路径不一致。
+// 用 realpathSync 跟随 symlink 统一为真实路径, 确保 PLAN 阶段 Write .harness/* 路径比较正确。
+// (VH-10 阶段 5 验收在 /tmp/ 下发现: Write .harness/current-stage.json 被 PLAN 错误阻止)
+const ROOT = (() => { try { return fs.realpathSync(ROOT_RAW); } catch { return ROOT_RAW; } })();
 
 const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const STALE_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -354,7 +358,7 @@ process.stdin.on('end', () => {
       // 注意: 如果 STAGE_FILE 是 symlink, safeFileExists 返回 false → 视为不存在,
       // 走 Bootstrap 口要求重新 Write (作为普通文件).
       const writePath = String(input.tool_input?.file_path || '');
-      if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
+      if (input.tool_name === 'Write' && (() => { try { return fs.realpathSync(path.resolve(writePath)); } catch { return path.resolve(writePath); } })() === path.resolve(STAGE_FILE)) {
         const parsed = validateStageWrite(input);  // 缺失/非法/偏差过大 → exit 2
         process.stderr.write('[Harness Stage Guard] 正在创建阶段声明，放行。\n');
         // 记录阶段历史
@@ -389,7 +393,7 @@ process.stdin.on('end', () => {
       } else if (!data.stage || !STAGES.includes(data.stage)) {
         // 无效 stage 时也允许 Write current-stage.json（修复 deadlock），但仍要校验 since
         const writePath = String(input.tool_input?.file_path || '');
-        if (input.tool_name === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
+        if (input.tool_name === 'Write' && (() => { try { return fs.realpathSync(path.resolve(writePath)); } catch { return path.resolve(writePath); } })() === path.resolve(STAGE_FILE)) {
           validateStageWrite(input);  // 缺失/非法/偏差过大 → exit 2
           process.stderr.write('[Harness Stage Guard] 阶段无效，允许重写阶段声明。\n');
         } else {
@@ -403,7 +407,7 @@ process.stdin.on('end', () => {
 
         // ── 阶段切换 Gate 检查 ──
         // 如果是 Write current-stage.json，校验 since 然后检查目标阶段
-        if (toolName === 'Write' && path.resolve(writePath) === path.resolve(STAGE_FILE)) {
+        if (toolName === 'Write' && (() => { try { return fs.realpathSync(path.resolve(writePath)); } catch { return path.resolve(writePath); } })() === path.resolve(STAGE_FILE)) {
           const newData = validateStageWrite(input);  // 缺失/非法/偏差过大 → exit 2
 
           try {
@@ -467,8 +471,8 @@ process.stdin.on('end', () => {
         // PLAN 阶段：硬约束——只允许读工具 + 任务管理工具 + Write 计划文件/阶段文件
           const isReadTool = READ_TOOLS.includes(toolName);
           const isTaskTool = TASK_TOOLS.includes(toolName);
-          // 精确匹配：resolve 后比对，防止路径绕过
-          const resolvedWrite = path.resolve(writePath);
+          // 精确匹配：realpathSync 后比对, 跟随 symlink 确保 /tmp ↔ /private/tmp 一致
+          const resolvedWrite = (() => { try { return fs.realpathSync(path.resolve(writePath)); } catch { return path.resolve(writePath); } })();
           const isAllowedWrite = toolName === 'Write' &&
             [PLAN_FILE, STAGE_FILE].some(f => resolvedWrite === path.resolve(f));
 
