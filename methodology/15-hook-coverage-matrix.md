@@ -166,14 +166,16 @@ stage-guard 对所有匹配的工具都会执行统一流程：
 
 修改 Hook 覆盖时必须同步以下位置。矩阵与这些文件任何一个不一致都算漂移：
 
+以下路径均相对 kit 仓库根目录（`<KIT_ROOT>`）：
+
 **强制同步（所有 Hook 变更）**:
-- `simple-harness-kit/templates/settings-json.tmpl`（模板 source of truth）
-- `simple-harness-kit/scripts/hooks/*.js` 相关脚本（如 `harness-stage-guard.js` 的 `READ_TOOLS` / `TASK_TOOLS`）
+- `templates/settings-json.tmpl`（模板 source of truth）
+- `scripts/hooks/*.js` 相关脚本（如 `harness-stage-guard.js` 的 `READ_TOOLS` / `TASK_TOOLS`）
 - 对应 Hook 脚本的头部注释"触发"行
 - 对应测试场景（`tests/hook-scenarios/*.json`）
 - 本矩阵（`methodology/15-hook-coverage-matrix.md`）
 
 **按范围同步**:
-- `.claude/settings.json` — 使用方工作区（如 ths-harness）配置，仅当改动对该工作区有效时同步
-- `simple-harness-kit/init-prompt.md` — **最小配置示例**，仅同步"必选"级别的 hook；可选 hook 不必出现
-- `simple-harness-kit/methodology/05-hook-enforcement.md` — 方法论文档，settings.json 示例建议只保留精简版并显式指向本矩阵和模板，避免三份竞争性真实源
+- `.claude/settings.json` — 使用方工作区（如 ths-harness dogfooding workspace）配置，仅当改动对该工作区有效时同步
+- `init-prompt.md` — **最小配置示例**，仅同步"必选"级别的 hook；可选 hook 不必出现
+- `methodology/05-hook-enforcement.md` — 方法论文档，settings.json 示例建议只保留精简版并显式指向本矩阵和模板，避免三份竞争性真实源

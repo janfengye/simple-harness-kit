@@ -88,6 +88,26 @@ git diff --stat  # 检查改动范围是否合理
 
 **Gate 条件：** 6 项全部 PASS
 
+### Layer 2 铁律: 实弹测试不得绕过被测组件（VH-10 教训, 2026-04-09 加入）
+
+Layer 2 的测试和实弹场景必须**真正经过被测组件的真实使用路径**。**禁止**以下反模式:
+
+1. **Sub-agent 实验时在 prompt 里预先提供资源绝对路径** — 如果被测组件是"Skill 的路径解析逻辑"，却在 sub-agent prompt 里先说"kit 在 /abs/path/to/kit"，sub-agent 据此成功读文件，这**不证明** Skill 写得对，只证明"sub-agent 按你给的路径读文件的能力"。参考 C-TEST-04。
+
+2. **静态内容检查替代运行时解析** — 检查文档里"是否包含某字符串"不等于"该字符串在真实用户环境下能解析"。涉及路径的测试**必须同时**验证 `[ -f "$cwd/<path>" ]` 或等价。参考 C-TEST-05。
+
+3. **在作者机器特殊环境跑"真实场景"** — dogfooding workspace (如 ths-harness 同时持有 simple-harness-kit 作为子目录) 是一个**特殊 case**，cwd-relative 路径在这里恰好能 work。真实用户的 cwd 和 kit 位置无父子关系。涉及"用户在任意目录"的功能，测试必须用**至少 3 个无父子关系的随机 tmp 目录**作为 `$HOME` / `$KIT` / `$CWD`。参考 C-TEST-06。
+
+**正确姿势**: 
+- 写**脚本化**（不依赖 AI）测试
+- 用 `mktemp -d` 建 3 个无父子 tmp dir
+- `cp -r` 真实拷贝 kit 到 tmp (不用 symlink — 模拟 clone)
+- 在 $CWD 下跑被测功能
+- 每个 assertion 都用 `EXPECTED_ASSERTIONS=N + 结尾校验` 防止 early exit 静默跳过
+- Mutation 反证: 注入已知 bug → 期望 FAIL, 移除 → 期望 PASS (证明"测试通过"非假象)
+
+**历史教训 VH-10**: v0.7.0 发布后用户连续报两个 P0 低级 bug (`cp -r` 非幂等 + SKILL.md cwd-relative 路径)。两者都在发版前"测试全绿", 但测试体系(a) 从未跑"二次 install", (b) 只做 SKILL.md 静态内容检查, (c) dogfooding 作者环境恰好能让 cwd-rel 路径 work。这是 VH-05 "mock 通过不代表真实生效" 在 sub-agent 层 + 环境特殊性层的双重重演。
+
 **输出格式：**
 ```
 VERIFICATION REPORT

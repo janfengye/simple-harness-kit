@@ -63,6 +63,38 @@ T10/T11 任一 FAIL → 本 release **禁止进 Step 1**。必须先：
 
 ---
 
+### Step 0.5: Scripted Test Matrix gate（强制, 2026-04-09 VH-10 后加入）
+
+**必须先做**。这一步确保 install/update 脚本 + SKILL.md 路径解析 + skill 自包含 resources/ 在真实用户场景（3 个无父子关系的随机 tmp 目录：$HOME / $KIT / $CWD）下全部 PASS。
+
+```bash
+bash tests/scripts/run-all.sh
+
+# 必须看到:
+#   维度总数:   7
+#   PASS:       7
+#   FAIL:       0
+#   全部维度 PASS ✓
+```
+
+涵盖维度（`tests/scripts/01..07-*.sh`）:
+
+1. **脚本幂等性** — install/update 反复跑不嵌套（catch VH-10 问题 A）
+2. **Skill 路径可解析性** — SKILL.md 中所有路径在真实 cwd 解析（catch VH-10 问题 B）
+3. **全链路 e2e** — install → 模拟 init 拷资源 → validate.sh PASS
+4. **目录结构 invariant** — post-install manifest 精确 diff
+5. **Bug 注入反测 (mutation)** — 证明 01-04 真能 catch 对应 bug（L3 正负基线）
+6. **路径风格矩阵** — plain / 空格 / 中文 / 超长 4 种路径 × 维度 1+4
+7. **Install scope 分支** — personal vs project 两种 scope 一致
+
+此外必须含 L2 (断言计数), L6 (zsh 兼容), T12 (resources 同步守门)。任一 FAIL → 本 release **禁止进 Step 1**。
+
+**为什么在这一步**: VH-10 两个 P0 bug（cp -r 嵌套 + cwd-rel 路径失效）在 v0.7.0 release 时全部静默逃逸, 因为当时的测试体系(1) 只测"从零状态"不测"二次执行", (2) 只做 SKILL.md 静态内容检查不验"真实 cwd 下路径能不能打开", (3) 在 dogfooding workspace (cwd 恰好是 kit 父目录) 跑测试, 这个特殊环境完美掩盖 cwd-rel bug。Step 0.5 的 3-random-dir 要求 + mutation 反证是"不依赖 AI 能力的脚本化防线"，是 v0.7.2 起 release gate 的硬门槛。
+
+**关联约束**: C-SKILL-01, C-TEST-04, C-TEST-05, C-TEST-06, C-HOOK-07
+
+---
+
 ### Step 1: 决定版本号
 
 查看自上次 tag 以来的变更：

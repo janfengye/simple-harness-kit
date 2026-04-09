@@ -7,7 +7,7 @@
 告诉 AI：
 
 ```
-读取 ~/path/to/simple-harness-kit/init-prompt.md 和 methodology/ 目录。
+读取 <kit 绝对路径>/init-prompt.md 和 <kit 绝对路径>/methodology/ 目录 (如 ~/ops/simple-harness-kit 或 D:\\simple-harness-kit, 按你实际 clone 位置填)。
 为这个项目初始化 Harness。
 ```
 
@@ -93,7 +93,7 @@ settings.json Hook 注册数: N 个
 Codex 执行 init 时必须使用 `--full-auto` 或 `-s workspace-write` 模式，否则文件可能无法正确写入磁盘：
 
 ```bash
-codex --full-auto "Read ~/simple-harness-kit/init-prompt.md and methodology/. Initialize Harness for this project."
+codex --full-auto "Read <KIT_ROOT>/init-prompt.md and <KIT_ROOT>/methodology/. Initialize Harness for this project." # 把 <KIT_ROOT> 替换为你 clone kit 的绝对路径
 ```
 
 ## settings.json 最小配置
