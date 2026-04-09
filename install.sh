@@ -60,6 +60,8 @@ installed=0
 for skill_dir in "$SKILLS_SRC"/*/; do
   if [ -f "$skill_dir/SKILL.md" ]; then
     skill_name=$(basename "$skill_dir")
+    # 幂等: 如 dest 已存在必须先删, 否则 cp -r 会把 source 嵌套进 dest (VH-10 根因)
+    rm -rf "$DEST/$skill_name"
     cp -r "$skill_dir" "$DEST/$skill_name"
     echo "  OK  $skill_name"
     installed=$((installed + 1))

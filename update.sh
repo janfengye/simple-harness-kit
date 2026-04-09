@@ -60,6 +60,8 @@ for dest in "$HOME/.claude/skills" "$(pwd)/.claude/skills"; do
           if $DRY_RUN; then
             echo "  [dry-run] 将更新: $skill_name"
           else
+            # 幂等: 必须先删 dest, 否则 cp -r 会把 source 嵌套进 dest (VH-10 根因)
+            rm -rf "$dest/$skill_name"
             cp -r "$skill_dir" "$dest/$skill_name"
             echo "  更新: $skill_name"
           fi
