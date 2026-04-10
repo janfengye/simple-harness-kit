@@ -62,7 +62,9 @@ bash install.sh   # 幂等安装，新版本不会再产生嵌套
   - `run-all.sh` 主 runner + meta L1（语法）/ L2（断言计数）/ L6（multi-shell）
 - `tests/template-integrity.js` T12 — `skills/harness-init/resources/` 与 kit 源文件 byte-identical 同步守门
 - `tests/template-integrity.js` T13 — SKILL.md Step 0 含 C-SKILL-02 trust model 守门静态检查
-- `docs/constraints.md` JC-07 — VH-10 + C-SKILL-01 + **C-SKILL-02 (trust model)** + C-TEST-04 + C-TEST-05 + C-TEST-06 + C-HOOK-07 六条新约束
+- `tests/template-integrity.js` T14 — SKILL.md Step 0 完整性校验锚点在 kit 里真实存在（防声明的文件名与实际不符的漂移, 阶段 4 验收发现）
+- `tests/template-integrity.js` T15 — `qa-standards.md.tmpl` 含 9 个必需行为短语（TDD 铁律 / Layer 1-5 / VERIFICATION REPORT / Reviewer / pass@1, Issue #1 / VH-11）
+- `docs/constraints.md` JC-07 — VH-10 + C-SKILL-01 + **C-SKILL-02 (trust model)** + **C-SKILL-03 (Skill UX 边界)** + C-TEST-04 + C-TEST-05 + C-TEST-06 + C-HOOK-07
 - `docs/release-process.md` Step 0.5 — Scripted Test Matrix 强制 gate，release 前必须 `bash tests/scripts/run-all.sh` 全 PASS
 - `methodology/04-qa-pyramid.md` Layer 2 铁律 — "实弹测试不得绕过被测组件"
 - `methodology/08-feedback-loop.md` — VH-10 教训段 + F 层铁律（5 条脚本化测试硬要求）
@@ -72,6 +74,10 @@ bash install.sh   # 幂等安装，新版本不会再产生嵌套
 - **`install.sh` + `update.sh` 幂等性** (VH-10 问题 A): `cp -r "$src" "$dst/$name"` 改为 `rm -rf "$dst/$name" && cp -r "$src" "$dst/$name"`，二次及多次执行不再产生嵌套目录
 - **`skills/harness-init/SKILL.md` 路径解析** (VH-10 问题 B): 硬编码 `simple-harness-kit/...` 路径全部改为 `./resources/*` (skill-relative) 或 `$KIT_ROOT/*` (Step 0 定位的变量)
 - **`templates/rules/commit-standards.md.tmpl`** + **`templates/rules/feedback-workflow.md.tmpl`**: 清除派生到用户项目的 cwd-relative kit 路径引用（用户项目下这些路径无法解析）
+- **`skills/harness-init/SKILL.md` 完整性校验锚点** (阶段 4 验收发现): `methodology/00-overview.md` → `methodology/00-philosophy.md`（真实文件名）+ 新增 `init-prompt.md` 锚点, 共 7 个
+- **`scripts/hooks/harness-stage-guard.js` macOS symlink 路径比较** (阶段 5 验收发现): `/tmp` → `/private/tmp` symlink 导致 `path.resolve()` 比较不一致 → PLAN 阶段 Write `.harness/current-stage.json` 被错误阻止 → AI 死锁。改用 `fs.realpathSync()` 统一真实路径
+- **`templates/rules/qa-standards.md.tmpl` 从骨架改为完整 5 层 QA** (Issue #1 / VH-11): 56 行占位符 → ~130 行含 TDD 铁律 "NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST" + Layer 1-5 + Santa Method + VERIFICATION REPORT 格式 + 量化指标。A/B 对比证明: 旧模板 → AI 直接写代码; 新模板 → AI 先补测试基建再写功能
+- **`skills/harness-init/SKILL.md` Step 4 用户层 UX** (C-SKILL-03): init 结束不再默认跑 76 项 kit CI，改为 4 项用户层最小集检查，输出 "Harness init 完成 ✓"
 
 ### Changed
 
@@ -79,15 +85,15 @@ bash install.sh   # 幂等安装，新版本不会再产生嵌套
 
 ### Constraint 系统
 
-- 新增约束 (6)：C-SKILL-01 / C-SKILL-02 / C-TEST-04 / C-TEST-05 / C-TEST-06 / C-HOOK-07
-- 扩展约束 (1)：C-GATE-02 加入"3 个无父子关系随机 tmp 目录"要求 + "sub-agent 实验不得预置被测组件资源路径"
-- 新增 VH：VH-10（含完整 5 层失效分析：shell 幂等性盲区 / skill 路径解析盲区 / dogfooding 环境假象 / sub-agent 实验假 PASS / E2E 入口盲区延续）
+- 新增约束 (7)：C-SKILL-01 / C-SKILL-02 / C-SKILL-03 / C-TEST-04 / C-TEST-05 / C-TEST-06 / C-HOOK-07
+- 扩展约束 (2)：C-GATE-02 (3-random-dir + sub-agent 反模式) + C-GATE-04 (4 层验收矩阵: 机制+内容+行为+产出)
+- 新增 VH：VH-10（路径/幂等, 5 层失效分析）+ VH-11（模板内容质量, "机制完整 ≠ 产出有效"）
 - workspace (`ths-harness`) ↔ kit 两份 constraints.md 同步双写（C-META-04 守门）
 
 ### 质量工程成果
 
-- 测试: **125 passed, 0 failed, 125 total**（107 hook scenarios + **17 template-integrity 含新 T12/T13** + 1 Scripted Matrix 7 维度聚合）
-- 脚本化矩阵: **7 / 7 维度**, 70 个 L2 断言
+- 测试: **127 passed, 0 failed, 127 total**（107 hook scenarios + **19 template-integrity T1-T15** + 1 Scripted Matrix 7 维度聚合）
+- 脚本化矩阵: **7 / 7 维度**
 - Mutation: **21 / 21** (M1-M9 bug 注入双向证明 + 2 baseline)
 - 跨模型交叉验收: 4 轮, Claude Opus 4.6 实现 + Sub-agent A spec(15/15) + Sub-agent B test-replay(APPROVE WITH NOTES, 修 3 盲区) + Codex gpt-oss-120b(round 1/2 找 1 盲区) + **Codex gpt-5.4(round 3 找 3 block 级缺陷, round 4 零发现 APPROVE)**
 - 收敛曲线: 每轮 cross-review 发现递减，round 4 零发现 = release gate 关闭

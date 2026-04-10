@@ -107,9 +107,9 @@ if [ $L1_FAIL -gt 0 ]; then
   exit 1
 fi
 
-# ── 执行 7 个维度脚本 ──
+# ── 执行维度脚本 ──
 echo ""
-echo "── 维度 01-07 ──"
+echo "── 维度 01-07 (核心, 必跑) ──"
 
 DIMS=(
   "01-script-idempotency.sh"
@@ -121,20 +121,36 @@ DIMS=(
   "07-scope-branches.sh"
 )
 
+# 维度 08-10 依赖 codex, 可选 (SKIP 不算 FAIL)
+OPTIONAL_DIMS=(
+  "08-content-quality.sh"
+  "09-behavior-observation.sh"
+  "10-output-quality.sh"
+)
+DIMS+=("${OPTIONAL_DIMS[@]}")
+
 TOTAL=0
 PASS=0
 FAIL=0
 FAIL_NAMES=()
+
+SKIP=0
+SKIP_NAMES=()
 
 for dim in "${DIMS[@]}"; do
   TOTAL=$((TOTAL+1))
   echo ""
   echo "▶ $dim"
   set +e
-  bash "$SCRIPT_DIR/$dim"
+  OUTPUT=$(bash "$SCRIPT_DIR/$dim" 2>&1)
   rc=$?
   set -e
-  if [ $rc -eq 0 ]; then
+  echo "$OUTPUT"
+  # exit 0 = PASS; SKIP 检测: 输出含 "SKIP" 且 exit 0
+  if [ $rc -eq 0 ] && echo "$OUTPUT" | grep -q "SKIP"; then
+    SKIP=$((SKIP+1))
+    SKIP_NAMES+=("$dim")
+  elif [ $rc -eq 0 ]; then
     PASS=$((PASS+1))
   else
     FAIL=$((FAIL+1))
@@ -171,6 +187,7 @@ echo "  Scripted Test Matrix 汇总"
 echo "════════════════════════════════════════════════════"
 echo "  维度总数:   $TOTAL"
 echo "  PASS:       $PASS"
+echo "  SKIP:       $SKIP"
 echo "  FAIL:       $FAIL"
 
 if [ $FAIL -gt 0 ]; then
