@@ -121,13 +121,13 @@ DIMS=(
   "07-scope-branches.sh"
 )
 
-# 维度 08-10 依赖 codex, 可选 (SKIP 不算 FAIL)
-OPTIONAL_DIMS=(
-  "08-content-quality.sh"
-  "09-behavior-observation.sh"
-  "10-output-quality.sh"
-)
-DIMS+=("${OPTIONAL_DIMS[@]}")
+# 维度 08: 内容质量 — 纯脚本化 (不依赖 codex), 与 01-07 同级别必跑
+DIMS+=("08-content-quality.sh")
+
+# 维度 09-10 依赖 codex AI runtime, 不进常规 CI, 只在 release 前手动跑:
+#   bash tests/scripts/09-behavior-observation.sh
+#   bash tests/scripts/10-output-quality.sh
+# 手动跑时 codex 不可用会 SKIP, 可用时验证 AI 行为 + 产出质量.
 
 TOTAL=0
 PASS=0
