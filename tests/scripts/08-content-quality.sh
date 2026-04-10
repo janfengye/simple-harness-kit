@@ -10,7 +10,7 @@
 
 set -uo pipefail
 
-EXPECTED_ASSERTIONS=7
+EXPECTED_ASSERTIONS=8
 ASSERTIONS_RUN=0
 ASSERTIONS_FAIL=0
 
@@ -52,7 +52,9 @@ echo 'export function add(a,b){return a+b}' > "$TMP_PROJ/src/add.js"
 
 # 用 codex 做 init (超时 120 秒)
 INIT_PROMPT="Read $TMP_KIT/init-prompt.md and $TMP_KIT/methodology/. Init harness for this Node.js project. Use $TMP_KIT/templates/ and $TMP_KIT/scripts/hooks/. Do NOT run validate.sh."
-INIT_OUT=$(echo "$INIT_PROMPT" | timeout 120 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - 2>&1) || true
+# 300s timeout: 完整 init 需要 AI 读 init-prompt + methodology + 生成多个文件,
+# 120s 对 gpt-5.4 不够 (v0.7.2 验收实证). 300s 是实测可完成的上限.
+INIT_OUT=$(echo "$INIT_PROMPT" | timeout 300 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - 2>&1) || true
 
 QA_FILE="$TMP_PROJ/.claude/rules/qa-standards.md"
 
@@ -67,6 +69,7 @@ assert "含 Layer 1 (Agent Self-Verification)" "grep -q 'Layer 1' '$QA_FILE'"
 assert "含 Layer 2 (Verification Loop)" "grep -q 'Layer 2' '$QA_FILE'"
 assert "含 Reviewer (Spec Review / Santa)" "grep -qi 'Reviewer' '$QA_FILE'"
 assert "含 5 层金字塔 (至少 Layer 1-5)" "[ \$(grep -c 'Layer [1-5]' '$QA_FILE') -ge 5 ]"
+assert "含 VERIFICATION REPORT 格式或 Verification" "grep -qi 'VERIFICATION' '$QA_FILE'"
 assert "CLAUDE.md 存在且项目定制 (>200 bytes)" "[ -f '$TMP_PROJ/CLAUDE.md' ] && [ \$(wc -c < '$TMP_PROJ/CLAUDE.md') -gt 200 ]"
 
 [ "$ASSERTIONS_RUN" -eq "$EXPECTED_ASSERTIONS" ] || {

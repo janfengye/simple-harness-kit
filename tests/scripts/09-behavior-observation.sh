@@ -63,7 +63,7 @@ TESTJS
 
 # 先 init harness
 INIT_PROMPT="Read $TMP_KIT/init-prompt.md and $TMP_KIT/methodology/. Init harness for this Node.js project. Use $TMP_KIT/templates/ and $TMP_KIT/scripts/hooks/. Do NOT run validate.sh."
-echo "$INIT_PROMPT" | timeout 120 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - >/dev/null 2>&1 || true
+echo "$INIT_PROMPT" | timeout 300 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - >/dev/null 2>&1 || true
 
 if [ ! -f "$TMP_PROJ/.claude/rules/qa-standards.md" ]; then
   echo "  SKIP [09-behavior] init 未成功, 跳过行为观测"
@@ -72,7 +72,7 @@ fi
 
 # 给一个标准化任务: "加一个 subtract 函数 + 测试"
 TASK="Add a subtract(a,b) function to src/calc.js and a test for it in test/calc.test.js. Follow qa-standards.md strictly — TDD: write the failing test FIRST, then implement."
-TASK_OUT=$(echo "$TASK" | timeout 120 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - 2>&1) || true
+TASK_OUT=$(echo "$TASK" | timeout 300 codex exec --full-auto --skip-git-repo-check --cd "$TMP_PROJ" - 2>&1) || true
 
 # 行为痕迹检查
 TASK_OUT_FILE="$TMP_PROJ/.task-output.txt"
