@@ -10,6 +10,17 @@
 
 （暂无新条目）
 
+## [0.7.3] - 2026-04-11
+
+### Fixed
+
+- `harness-stage-guard.js`: `validateStageWrite()` 增加 stage 值合法性校验，写入 "COMPLETE" 等无效值时直接 exit 2 阻止（Issue #2 预防层）
+- `harness-stage-guard.js`: 已有无效 stage 文件时的错误消息增加修复指引（Write 示例 + date 命令），AI 可自行修复而非锁死用户（Issue #2 恢复层）
+
+### Tests
+
+- 新增 5 个测试场景 (T1-T5): 写入无效值阻止、读取无效值指引、修复路径放行
+
 ## [0.7.2] - 2026-04-09
 
 ### Migration Notes for VH-10
