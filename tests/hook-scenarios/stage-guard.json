@@ -169,7 +169,7 @@
     }
   },
   {
-    "name": "stage-guard: 无效 stage 值 → 阻止",
+    "name": "stage-guard: 无效 stage 值 → 阻止 + 修复指引 (T5)",
     "hook": "harness-stage-guard.js",
     "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
     "setup": {
@@ -178,7 +178,77 @@
     },
     "expect": {
       "exitCode": 2,
-      "stderr": ["无效的阶段值"]
+      "stderr": ["无效的阶段值", "修复方法", "Write"]
+    }
+  },
+  {
+    "name": "stage-guard: Write 无效 stage 'COMPLETE' → 写入时阻止 (T1)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"COMPLETE\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"invalid write\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["无效的 stage 值", "COMPLETE", "PLAN, SETUP, EXECUTE, VERIFY, REVIEW, FEEDBACK, OFF"]
+    }
+  },
+  {
+    "name": "stage-guard: Write 无效 stage 'DONE' → 写入时阻止 (T2)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"DONE\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"invalid write\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"2026-04-03T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["无效的 stage 值", "DONE"]
+    }
+  },
+  {
+    "name": "stage-guard: 已有无效 stage 'COMPLETE' + Read → 阻止 + 修复指引 (T3)",
+    "hook": "harness-stage-guard.js",
+    "stdin": { "tool_name": "Read", "tool_input": { "file_path": "foo.md" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"COMPLETE\",\"since\":\"2026-04-03T00:00:00Z\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["无效的阶段值", "COMPLETE", "修复方法", "Write"]
+    }
+  },
+  {
+    "name": "stage-guard: 已有无效 stage 'COMPLETE' + Write 修复为 PLAN → 放行 (T4)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"recovery from COMPLETE\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"COMPLETE\",\"since\":\"2026-04-03T00:00:00Z\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["阶段无效，允许重写"]
     }
   },
   {

@@ -297,13 +297,25 @@ function validateSince(newData) {
   return null;
 }
 
-// 从 Write tool_input 中解析 newData 并校验 since；错误时直接写 stderr + exit 2
+// 合法的 stage 值（写入校验用）
+const VALID_STAGES_FOR_WRITE = [...STAGES, 'OFF'];
+
+// 从 Write tool_input 中解析 newData 并校验 stage + since；错误时直接写 stderr + exit 2
 function validateStageWrite(input) {
   let newData = null;
   try {
     newData = JSON.parse(String(input.tool_input?.content || ''));
   } catch {
     process.stderr.write('[Harness Stage Guard] current-stage.json 内容不是合法 JSON，拒绝写入。\n');
+    process.exit(2);
+  }
+  // 校验 stage 值合法性（Issue #2: 防止写入 "COMPLETE" 等无效值）
+  if (!newData || !newData.stage || !VALID_STAGES_FOR_WRITE.includes(newData.stage)) {
+    const val = newData?.stage || '(空)';
+    process.stderr.write(
+      `[Harness Stage Guard] 无效的 stage 值: ${val}，拒绝写入。\n` +
+      `有效值: ${VALID_STAGES_FOR_WRITE.join(', ')}\n`
+    );
     process.exit(2);
   }
   const err = validateSince(newData);
@@ -397,7 +409,11 @@ process.stdin.on('end', () => {
           validateStageWrite(input);  // 缺失/非法/偏差过大 → exit 2
           process.stderr.write('[Harness Stage Guard] 阶段无效，允许重写阶段声明。\n');
         } else {
-          process.stderr.write(`[Harness Stage Guard] 无效的阶段值: ${data.stage}。有效值: ${STAGES.join(', ')}, OFF\n`);
+          process.stderr.write(
+            `[Harness Stage Guard] 无效的阶段值: ${data.stage}。有效值: ${STAGES.join(', ')}, OFF\n` +
+            `修复方法: 用 Write 工具重写 ${STAGE_FILE}，例如:\n` +
+            `  {"stage":"PLAN","since":"<用 date -u +%Y-%m-%dT%H:%M:%S.000Z 获取>","task":"<任务描述>"}\n`
+          );
           shouldBlock = true;
         }
       } else {
