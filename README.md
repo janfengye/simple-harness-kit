@@ -115,12 +115,12 @@ We surveyed three layers: **agent frameworks** (DeerFlow/LangGraph/CrewAI — bu
 
 ### Tool Compatibility
 
-> Experiments A/B/C verified on **Claude Code**. Experiment C also verified on **Codex CLI**. Other tools analyzed from docs, not yet tested.
+> Experiments A/B/C verified on **Claude Code**. Experiment C also verified on **Codex CLI**. Codex cross-compatibility testing (hooks.json format, stdin JSON, exit 2 blocking protocol) independently verified. Other tools analyzed from docs, not yet tested.
 
 | Tool | Hook Support | Status |
 |------|-------------|--------|
 | **Claude Code** | Native PreToolUse/PostToolUse | **Verified** (Exp A/B/C) |
-| **Codex CLI** | v0.117+ exec mode | **Verified** (Exp C) |
+| **Codex CLI** | Native hooks (`codex_hooks` flag required) | **Verified** (Exp C + cross-test) |
 | **Gemini CLI** | v0.26+ BeforeTool/AfterTool | Untested |
 | **Cursor** | v1.7+ hooks | Untested |
 | **OpenCode** | Plugin API (needs rewrite) | Untested |

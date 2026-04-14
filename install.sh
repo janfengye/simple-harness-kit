@@ -2,8 +2,11 @@
 # Simple Harness Kit — 一键安装全部 Skills
 #
 # 用法:
-#   bash install.sh                    # 安装到 ~/.claude/skills/（个人全局）
-#   bash install.sh --scope project    # 安装到当前项目 .claude/skills/
+#   bash install.sh                    # 交互式选择工具和 scope
+#   bash install.sh --target claude    # 只装 Claude Code
+#   bash install.sh --target codex     # 只装 Codex CLI
+#   bash install.sh --target both      # 两个都装
+#   bash install.sh --scope project    # 安装到当前项目（默认 personal 全局）
 #
 # Skills 在新 session 启动时自动发现，无需额外配置。
 
@@ -14,17 +17,27 @@ SKILLS_SRC="$SCRIPT_DIR/skills"
 
 # 解析参数
 SCOPE="personal"
+TARGET=""
 while [[ $# -gt 0 ]]; do
   case $1 in
     --scope)
       SCOPE="$2"
       shift 2
       ;;
+    --target)
+      TARGET="$2"
+      shift 2
+      ;;
     --help|-h)
-      echo "用法: bash install.sh [--scope personal|project]"
+      echo "用法: bash install.sh [--target claude|codex|both] [--scope personal|project]"
       echo ""
-      echo "  personal (默认)  安装到 ~/.claude/skills/，所有项目可用"
-      echo "  project          安装到当前目录 .claude/skills/，仅当前项目可用"
+      echo "  --target claude   只安装到 Claude Code"
+      echo "  --target codex    只安装到 Codex CLI"
+      echo "  --target both     两个都装"
+      echo "  (不指定)          交互式选择"
+      echo ""
+      echo "  --scope personal  安装到 ~/（默认，所有项目可用）"
+      echo "  --scope project   安装到当前项目 .claude/.codex 目录"
       exit 0
       ;;
     *)
@@ -34,43 +47,129 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "$SCOPE" in
-  personal)
-    DEST="$HOME/.claude/skills"
-    ;;
-  project)
-    DEST="$(pwd)/.claude/skills"
-    ;;
-  *)
-    echo "无效 scope: $SCOPE (可选: personal, project)"
-    exit 1
-    ;;
-esac
-
 echo ""
 echo "Simple Harness Kit — Skill 安装"
 echo "================================"
-echo "来源: $SKILLS_SRC"
-echo "目标: $DEST"
 echo ""
 
-mkdir -p "$DEST"
+# ── 工具检测 ──
 
-installed=0
-for skill_dir in "$SKILLS_SRC"/*/; do
-  if [ -f "$skill_dir/SKILL.md" ]; then
-    skill_name=$(basename "$skill_dir")
-    # 幂等: 如 dest 已存在必须先删, 否则 cp -r 会把 source 嵌套进 dest (VH-10 根因)
-    rm -rf "$DEST/$skill_name"
-    cp -r "$skill_dir" "$DEST/$skill_name"
-    echo "  OK  $skill_name"
-    installed=$((installed + 1))
+has_claude=false
+has_codex=false
+if command -v claude &>/dev/null; then has_claude=true; fi
+if command -v codex &>/dev/null; then has_codex=true; fi
+
+# ── 交互式选择（如果未指定 --target）──
+
+if [ -z "$TARGET" ]; then
+  # 默认选择所有已安装的
+  default_choice=""
+  if $has_claude && $has_codex; then
+    default_choice="1,2"
+  elif $has_claude; then
+    default_choice="1"
+  elif $has_codex; then
+    default_choice="2"
+  else
+    default_choice="1"
   fi
+
+  if [ -t 0 ]; then
+    # 交互模式：显示菜单让用户选择
+    echo "检测到已安装的工具:"
+    if $has_claude; then echo "  [1] Claude Code  (已安装)"; else echo "  [1] Claude Code  (未检测到)"; fi
+    if $has_codex;  then echo "  [2] Codex CLI    (已安装)"; else echo "  [2] Codex CLI    (未检测到)"; fi
+    echo ""
+
+    printf "安装目标 (输入数字，多选用逗号分隔，回车=%s): " "$default_choice"
+    read -r choice
+    if [ -z "$choice" ]; then choice="$default_choice"; fi
+  else
+    # 非交互模式（管道/脚本）：自动选择已安装的工具
+    choice="$default_choice"
+  fi
+
+  install_claude=false
+  install_codex=false
+  IFS=',' read -ra parts <<< "$choice"
+  for p in "${parts[@]}"; do
+    p=$(echo "$p" | tr -d ' ')
+    case "$p" in
+      1) install_claude=true ;;
+      2) install_codex=true ;;
+      *) echo "无效选项: $p"; exit 1 ;;
+    esac
+  done
+else
+  # --target 参数
+  install_claude=false
+  install_codex=false
+  case "$TARGET" in
+    claude) install_claude=true ;;
+    codex)  install_codex=true ;;
+    both)   install_claude=true; install_codex=true ;;
+    *)
+      echo "无效的 --target 值: $TARGET (可选: claude, codex, both)"
+      exit 1
+      ;;
+  esac
+fi
+
+if ! $install_claude && ! $install_codex; then
+  echo "未选择任何安装目标。"
+  exit 1
+fi
+
+# ── 构建安装目标列表 ──
+
+DEST_LIST=()
+
+if $install_claude; then
+  case "$SCOPE" in
+    personal) DEST_LIST+=("$HOME/.claude/skills") ;;
+    project)  DEST_LIST+=("$(pwd)/.claude/skills") ;;
+    *) echo "无效 scope: $SCOPE"; exit 1 ;;
+  esac
+fi
+
+if $install_codex; then
+  case "$SCOPE" in
+    personal) DEST_LIST+=("$HOME/.codex/skills") ;;
+    project)  DEST_LIST+=("$(pwd)/.codex/skills") ;;
+    *) echo "无效 scope: $SCOPE"; exit 1 ;;
+  esac
+fi
+
+# ── 安装 ──
+
+total_installed=0
+for DEST in "${DEST_LIST[@]}"; do
+  echo "来源: $SKILLS_SRC"
+  echo "目标: $DEST"
+  echo ""
+
+  mkdir -p "$DEST"
+
+  installed=0
+  for skill_dir in "$SKILLS_SRC"/*/; do
+    if [ -f "$skill_dir/SKILL.md" ]; then
+      skill_name=$(basename "$skill_dir")
+      # 幂等: 如 dest 已存在必须先删, 否则 cp -r 会把 source 嵌套进 dest (VH-10 根因)
+      rm -rf "$DEST/$skill_name"
+      cp -r "$skill_dir" "$DEST/$skill_name"
+      echo "  OK  $skill_name"
+      installed=$((installed + 1))
+    fi
+  done
+
+  echo ""
+  echo "安装完成: $installed 个 Skills → $DEST"
+  echo ""
+  total_installed=$((total_installed + installed))
 done
 
-echo ""
-echo "安装完成: $installed 个 Skills"
-echo ""
+# ── 后续指引 ──
+
 echo "用户手动触发:"
 echo "  /harness-init       为项目初始化 Harness（第一次用）"
 echo "  /harness-start      启动新任务（交互式，自动带约束）"
@@ -87,9 +186,20 @@ echo "  auto-harness-test-bootstrap  补测试体系"
 echo ""
 echo "下一步:"
 echo "  1. 进入你的项目目录"
-echo "  2. 启动新 session: claude"
-echo "  3. 输入: /harness-init"
-echo "  4. init 完成后开新 session（Hook 在新 session 生效）"
+
+if $install_claude; then
+  echo "  2. [Claude Code] 启动新 session: claude"
+  echo "     输入: /harness-init"
+fi
+
+if $install_codex; then
+  echo "  2. [Codex CLI] 启动:"
+  echo "     codex --full-auto --enable codex_hooks \"/harness-init\""
+  echo "     (确保 codex_hooks feature flag 已启用)"
+fi
+
+echo ""
+echo "  init 完成后开新 session（Hook 在新 session 生效）"
 echo ""
 echo "更新: bash $SCRIPT_DIR/update.sh"
 echo ""

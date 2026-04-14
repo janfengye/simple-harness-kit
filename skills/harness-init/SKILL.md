@@ -95,6 +95,47 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 >
 > 默认走第一种。只有当用户明确要求启用某个 optional hook 时，才走第二种并精确取舍。
 
+### Step 3.5: 检测并生成 Codex 配置（如适用）
+
+Step 3 生成了 Claude Code 的 `.claude/settings.json`。此步检测是否需要同时生成 Codex 的 `.codex/hooks.json`。
+
+**检测方式**（按优先级，任一命中即视为需要 Codex 配置）：
+1. 用户在 prompt 中提到了 "Codex" 或 "codex"
+2. 项目中已有 `.codex/` 目录
+3. 系统中 `which codex` 可用
+
+**如检测到 Codex 适用**，向用户说明：
+
+```
+检测到 Codex 环境，我会额外生成:
+  .codex/hooks.json — 从 settings.json 过滤 Codex 不支持的事件
+
+不需要 Codex 配置? 告诉我"跳过 Codex"。
+```
+
+用户确认（或未反对）后，生成步骤：
+1. 读取刚生成的 `.claude/settings.json`
+2. 过滤掉 Codex 不支持的顶层事件（`PostToolUseFailure`、`StopFailure`、`TaskCompleted`、`SessionEnd`）
+3. 保留 Codex 支持的事件（`SessionStart`、`PreToolUse`、`PostToolUse`、`Stop`、`UserPromptSubmit`）
+4. **不过滤 matcher** — 非 Bash matcher 在 Codex 下静默跳过不报错，保留有利于未来 Codex 支持更多 tool_name 时自动生效
+5. 写入 `.codex/hooks.json`
+6. 在输出中提醒：
+
+```
+Codex 用户注意:
+  codex_hooks feature flag 必须启用才能触发 Hook。
+  推荐在 ~/.codex/config.toml 中添加:
+    [features]
+    codex_hooks = true
+```
+
+**如未检测到 Codex** — 跳过此步，不生成 `.codex/hooks.json`。
+
+**手动工具**：如果 init 时未生成，用户后续可手动生成：
+```bash
+node $KIT_ROOT/scripts/generate-codex-hooks.js --input .claude/settings.json --output .codex/hooks.json
+```
+
 ### Step 4: 验证 init 完整性（C-SKILL-03: 用户层最小集）
 
 生成产物后，做以下 **4 项用户层检查**（不跑 76 项 kit CI）:
@@ -127,7 +168,14 @@ Harness init 完成 ✓
 
 ## Codex 用户
 
-按 `./resources/init-prompt.md` 中"Codex 用户注意"段执行（必须 `--full-auto`）。
+Codex 用户执行 init 时必须使用 `--full-auto` 模式。Step 3.5 会自动检测 Codex 环境并生成 `.codex/hooks.json`。
+
+如果 init 时未自动生成，可手动：
+```bash
+node $KIT_ROOT/scripts/generate-codex-hooks.js --input .claude/settings.json --output .codex/hooks.json
+```
+
+详见 `./resources/init-prompt.md` 中"Codex 用户注意"段。
 
 ## Attribution
 

@@ -62,12 +62,12 @@ prep_mutant() {
 echo "  [mutation M1] 注入: install.sh 的 rm -rf 改注释"
 prep_mutant
 # macOS/BSD sed 和 GNU sed 的 -i 语法不同. 用 sed -e 读+写 tmpfile 方式
-sed -e 's|^    rm -rf "\$DEST/\$skill_name"|    # rm -rf "\$DEST/\$skill_name"|' \
+sed -e 's|^      rm -rf "\$DEST/\$skill_name"|      # rm -rf "\$DEST/\$skill_name"|' \
   "$TMP_MUTANT_KIT/install.sh" > "$TMP_MUTANT_KIT/install.sh.new"
 mv "$TMP_MUTANT_KIT/install.sh.new" "$TMP_MUTANT_KIT/install.sh"
 
 # 验证注入生效 (行被注释掉)
-if grep -q '^    # rm -rf "\$DEST/\$skill_name"' "$TMP_MUTANT_KIT/install.sh"; then
+if grep -q '^      # rm -rf "\$DEST/\$skill_name"' "$TMP_MUTANT_KIT/install.sh"; then
   echo "    注入已生效"
 else
   echo "    ERR: 注入未生效 — install.sh 结构变了? 请检查 sed 模式"

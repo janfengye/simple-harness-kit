@@ -73,11 +73,46 @@ Harness init 完成 ✓
 
 ## Codex 用户注意
 
-Codex 执行 init 时必须使用 `--full-auto` 或 `-s workspace-write` 模式，否则文件可能无法正确写入磁盘：
+### 前提条件
+
+1. **启用 `codex_hooks` feature flag**（0.118.0 仍为 under development，默认关闭）：
+   - 命令行方式：每次加 `--enable codex_hooks`
+   - 配置文件方式（推荐）：在 `~/.codex/config.toml` 中添加：
+     ```toml
+     [features]
+     codex_hooks = true
+     ```
+
+2. **hooks.json 放在 `.codex/hooks.json`**（不是 `.claude/settings.json`）。JSON 格式与 Claude Code 的 settings.json 完全一致，只是文件名和路径不同。
+
+### Codex 的 Hook 限制
+
+Codex 的 `tool_name` 固定为 `"Bash"`，因此：
+- **正常触发**：matcher 为 `"Bash"` 的 hook（safety-guard、stage-guard:Bash、session-logger:Bash、commit-check 等）
+- **不会触发**：matcher 为 `"Edit"`/`"Write"`/`"Read"`/`"Agent"` 等的 hook（静默跳过，不报错）
+- **正常触发**：无 matcher 的事件（SessionStart、Stop）
+
+Codex 支持的事件类型：SessionStart、PreToolUse、PostToolUse、UserPromptSubmit、Stop。
+不支持的事件：PostToolUseFailure、StopFailure、TaskCompleted、SessionEnd。
+
+### init 命令
+
+Codex 执行 init 时必须使用 `--full-auto` 或 `-s workspace-write` 模式：
 
 ```bash
-codex --full-auto "Read <KIT_ROOT>/init-prompt.md and <KIT_ROOT>/methodology/. Initialize Harness for this project." # 把 <KIT_ROOT> 替换为你 clone kit 的绝对路径
+codex --full-auto --enable codex_hooks "Read <KIT_ROOT>/init-prompt.md and <KIT_ROOT>/methodology/. Initialize Harness for this project."
 ```
+
+### .codex/hooks.json 生成
+
+harness-init 会自动检测 Codex 环境并生成 `.codex/hooks.json`（从 `.claude/settings.json` 过滤不支持的事件）。
+
+如果未自动生成，可手动：
+```bash
+node <KIT_ROOT>/scripts/generate-codex-hooks.js --input .claude/settings.json --output .codex/hooks.json
+```
+
+格式与 settings.json 完全一致，只是过滤掉了 Codex 不支持的事件。
 
 ## settings.json 最小配置
 

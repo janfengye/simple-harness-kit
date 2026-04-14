@@ -12,6 +12,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
 HOOKS_SRC="$SCRIPT_DIR/scripts/hooks"
+CODEX_HOOKS_GEN="$SCRIPT_DIR/scripts/generate-codex-hooks.js"
 
 echo ""
 echo "Simple Harness Kit — 更新"
@@ -34,7 +35,7 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       echo "用法: bash update.sh [--hooks /path/to/project] [--dry-run]"
       echo ""
-      echo "  不带参数: 只更新 ~/.claude/skills/ 中的 Skills"
+      echo "  不带参数: 只更新已安装的 Skills (Claude Code + Codex)"
       echo "  --hooks <path>: 同时更新目标项目的 Hook 脚本到最新模板版本"
       echo "  --dry-run: 只输出版本差异清单，不执行更新"
       exit 0
@@ -46,11 +47,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ── 1. 更新 Skills ──
+# ── 1. 更新 Skills（扫描 Claude Code + Codex 两个位置）──
 
-# 检查两个可能的安装位置
+# 检查所有可能的安装位置
 updated=0
-for dest in "$HOME/.claude/skills" "$(pwd)/.claude/skills"; do
+for dest in "$HOME/.claude/skills" "$HOME/.codex/skills" "$(pwd)/.claude/skills" "$(pwd)/.codex/skills"; do
   if [ -d "$dest" ]; then
     echo "更新 Skills: $dest"
     for skill_dir in "$SKILLS_SRC"/*/; do
@@ -171,6 +172,20 @@ if [ -n "$PROJECT_DIR" ]; then
       echo "  所有 Hook 已是最新版。"
     else
       echo "  更新了 $synced 个, 新增了 $installed 个 Hook。新 session 生效。"
+    fi
+
+    # ── 2.5 同步 Codex hooks.json（如果存在）──
+    if [ -f "$PROJECT_DIR/.codex/hooks.json" ] && [ -f "$PROJECT_DIR/.claude/settings.json" ]; then
+      echo ""
+      echo "同步 Codex hooks.json..."
+      if [ -f "$CODEX_HOOKS_GEN" ]; then
+        node "$CODEX_HOOKS_GEN" \
+          --input "$PROJECT_DIR/.claude/settings.json" \
+          --output "$PROJECT_DIR/.codex/hooks.json"
+        echo "  .codex/hooks.json 已从 settings.json 重新生成。"
+      else
+        echo "  [警告] generate-codex-hooks.js 不存在，跳过 Codex 同步。"
+      fi
     fi
   fi
 fi

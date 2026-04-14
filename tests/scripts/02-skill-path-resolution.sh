@@ -80,6 +80,7 @@ const results = { skillRelOk: [], skillRelBad: [], absOk: [], absBad: [], cwdRel
 // methodology/ — 这些是 kit-internal, 必须带 $KIT_ROOT 或 kit-rel 上下文才合法.
 const TARGET_PROJECT_PREFIXES = [
   ".claude/",       // 目标项目的 .claude/rules/, .claude/settings.json
+  ".codex/",        // 目标项目的 .codex/hooks.json (Codex 配置)
   "scripts/",       // 目标项目的 scripts/hooks/*.js (init 后复制到项目)
   "docs/",          // 目标项目的 docs/constraints.md
 ];
