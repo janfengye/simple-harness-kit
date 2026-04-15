@@ -122,6 +122,36 @@ function setupTempDir(scenario) {
     }
   }
 
+  // gitSetup: 初始化 git 仓库并 stage 指定文件（用于 verification-gate C-GATE-07 测试等）
+  // 格式: { "init": true, "stage": ["path/to/file", ...] }
+  // stage 之前 setup 里必须先创建对应文件（或 gitSetup.create 可选填充空文件）
+  if (scenario.gitSetup) {
+    const { execFileSync } = require('child_process');
+    const gs = scenario.gitSetup;
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: tmpDir, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.name', 'test'], { cwd: tmpDir, stdio: 'ignore' });
+      // create: 创建空占位文件（如果 setup 里没创建）
+      if (Array.isArray(gs.create)) {
+        for (const f of gs.create) {
+          const full = path.join(tmpDir, f);
+          if (!fs.existsSync(full)) {
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(full, '');
+          }
+        }
+      }
+      if (Array.isArray(gs.stage)) {
+        for (const f of gs.stage) {
+          execFileSync('git', ['add', '-f', f], { cwd: tmpDir, stdio: 'ignore' });
+        }
+      }
+    } catch (e) {
+      // git 不可用或初始化失败，测试会走非 kit 路径；不抛出
+    }
+  }
+
   return tmpDir;
 }
 

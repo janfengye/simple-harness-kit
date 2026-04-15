@@ -3,13 +3,17 @@
 
 /**
  * Verification Gate Hook — commit/push 前的阶段和证据检查
- * @version 0.7.0
+ * @version 0.7.4
  * 触发: PreToolUse:Bash
  *
- * 三重检查:
+ * 四重检查:
  * 1. commit 阶段检查: 必须在 VERIFY/REVIEW/FEEDBACK 才能 commit
  * 2. 证据时效性: 验证证据文件的 mtime 必须晚于 current-stage.json 的 since
  * 3. push 阶段检查: 必须在 REVIEW 才能 push
+ * 4. 用户入口变更三模式证据（C-GATE-07, 仅 kit 仓库触发）:
+ *    commit 涉及 install.sh / update.sh / init-prompt.md / SKILL.md
+ *    / resources/init-prompt.md / generate-codex-hooks.js 时，
+ *    verify-evidence.md 必须同时含 '独立 agent' / 'Claude Code' / 'Codex' 三个标记
  *
  * 环境变量 HARNESS_SKIP_GATE=1 临时跳过（需记录原因）。
  *
@@ -18,6 +22,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const findRoot = require('./find-root');
 const ROOT = findRoot();
 
@@ -31,6 +36,24 @@ const REPORT_PATHS = [
   path.join(ROOT, '.harness/last-verification.json'),
   path.join(ROOT, '.harness/verify-evidence.md'),
 ];
+
+// ── C-GATE-07: kit-only 守门 ──
+// kit 特征文件，用于判定"当前仓库是否 simple-harness-kit"。
+// 非 kit 仓库（用户项目）跳过本层，旧行为不变。
+const KIT_MARKER_FILE = path.join(ROOT, 'tests/template-integrity.js');
+
+// 用户入口文件白名单：任一命中 → 要求三模式证据
+const USER_ENTRY_FILES = [
+  'install.sh',
+  'update.sh',
+  'init-prompt.md',
+  'skills/harness-init/SKILL.md',
+  'skills/harness-init/resources/init-prompt.md',
+  'scripts/generate-codex-hooks.js',
+];
+
+// 三模式证据标记（对应 C-GATE-04 三 runtime 模式）
+const RUNTIME_MARKERS = ['独立 agent', 'Claude Code', 'Codex'];
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -134,7 +157,48 @@ process.stdin.on('end', () => {
         );
         process.exit(2);
       }
+
+      // ── C-GATE-07: 用户入口变更三模式证据检查（kit 仓库专用）──
+      if (fs.existsSync(KIT_MARKER_FILE)) {
+        const staged = getStagedFiles();
+        if (staged !== null) {
+          const hit = staged.filter(f => USER_ENTRY_FILES.includes(f));
+          if (hit.length > 0) {
+            let evidence = '';
+            try { evidence = fs.readFileSync(freshReport.path, 'utf8'); } catch {}
+            const missing = RUNTIME_MARKERS.filter(m => !evidence.includes(m));
+            if (missing.length > 0) {
+              process.stderr.write(
+                `[Verification Gate] C-GATE-07: 本次 commit 涉及用户入口文件 ${JSON.stringify(hit)}，\n` +
+                `但验证证据 ${freshReport.path} 缺少以下 runtime 模式标记: ${JSON.stringify(missing)}\n` +
+                `→ 要求同时覆盖三模式: ${JSON.stringify(RUNTIME_MARKERS)}\n` +
+                `→ 这是 VH-12 加固：用户入口变更必须提供完整 C-GATE-04 三模式证据。\n` +
+                `→ 紧急豁免: HARNESS_SKIP_GATE=1 (需在 commit message 记录原因)\n`
+              );
+              process.exit(2);
+            }
+          }
+        }
+      }
     }
   } catch {}
   process.stdout.write(raw);
 });
+
+/**
+ * 返回 git 已 stage 的文件列表（相对 repo root 的 POSIX 路径），
+ * 无 git / 非仓库 / 命令失败时返回 null（保守放行，不阻塞正常流）。
+ */
+function getStagedFiles() {
+  try {
+    const out = execFileSync('git', ['diff', '--cached', '--name-only'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 2000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return out.split('\n').map(l => l.trim()).filter(Boolean);
+  } catch {
+    return null;
+  }
+}

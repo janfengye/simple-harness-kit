@@ -130,5 +130,84 @@
       "exitCode": 2,
       "stderr": ["验证证据早于当前任务"]
     }
+  },
+  {
+    "name": "verification-gate: C-GATE-07 kit + 触及 install.sh + 证据缺 Codex → 阻止",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'touch install.sh'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence\n独立 agent: ✓\nClaude Code CLI: ✓\n(第三 runtime 缺失)",
+      "tests/template-integrity.js": "// kit marker",
+      "install.sh": "#!/bin/sh\necho hi"
+    },
+    "gitSetup": { "stage": ["install.sh"] },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["C-GATE-07", "install.sh", "Codex"]
+    }
+  },
+  {
+    "name": "verification-gate: C-GATE-07 kit + 触及 install.sh + 证据三模式齐全 → 放行",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'touch install.sh'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence\n独立 agent: ✓（前次）\nClaude Code CLI: ✓（前次）\nCodex CLI: ✓（本次 --full-auto）",
+      "tests/template-integrity.js": "// kit marker",
+      "install.sh": "#!/bin/sh\necho hi"
+    },
+    "gitSetup": { "stage": ["install.sh"] },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: C-GATE-07 kit + 触及 SKILL.md + 证据三模式齐全 → 放行",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'skill update'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# E2E\n- 独立 agent\n- Claude Code\n- Codex",
+      "tests/template-integrity.js": "// kit marker",
+      "skills/harness-init/SKILL.md": "# skill"
+    },
+    "gitSetup": { "stage": ["skills/harness-init/SKILL.md"] },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: C-GATE-07 kit + 只触及非入口文件 → 放行（第 4 层不触发）",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'doc tweak'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"test\"}",
+      ".harness/verify-evidence.md": "# Evidence (no runtime markers)",
+      "tests/template-integrity.js": "// kit marker",
+      "docs/misc.md": "random"
+    },
+    "gitSetup": { "stage": ["docs/misc.md"] },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
+  },
+  {
+    "name": "verification-gate: C-GATE-07 非 kit 仓库 + 触及同名 install.sh → 放行（kit 检测失败跳过第 4 层）",
+    "hook": "verification-gate.js",
+    "stdin": { "tool_name": "Bash", "tool_input": { "command": "git commit -m 'user project'" } },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"VERIFY\",\"since\":\"2020-01-01T00:00:00Z\",\"task\":\"user project\"}",
+      ".harness/verify-evidence.md": "# User evidence, no runtime markers",
+      "install.sh": "#!/bin/sh\necho user"
+    },
+    "gitSetup": { "stage": ["install.sh"] },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "passthrough"
+    }
   }
 ]
