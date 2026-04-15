@@ -10,6 +10,30 @@
 
 （暂无新条目）
 
+## [0.8.1] - 2026-04-15
+
+### Fixed
+
+- **Codex runtime hook JSON schema 兼容 (VH-13, P0)**: 删除 9 个 hook 共 19 处放行分支 `process.stdout.write(raw)` 调用。Codex 0.118.0 严格按决策响应 schema parse PreToolUse hook 的 stdout，原 passthrough 写回的是请求 JSON（`tool_name`/`tool_input`/`hook_event_name`），每次 Bash 调用都报 "PreToolUse hook (failed) - invalid pre-tool-use JSON output"。改用空 stdout + exit 0，两个 runtime 都视为 allow-unchanged。受影响文件：`harness-stage-guard.js`、`verification-gate.js`、`session-logger.js`、`session-end.js`、`safety-guard.js`、`context-monitor.js`、`agent-check.js`、`delivery-review.js`、`commit-check.js`
+- **`init-prompt.md` 日常启动 Codex 文档补齐**: 新增 "### 日常启动 Codex（init 完成之后）" 小节，说明 init 之后不需要 `--full-auto`、仍需 `codex_hooks` feature flag、默认 `workspace-write` sandbox 够用、与 Claude Code 差异对照表、以及 "hook 完全不触发 → 99% 是 flag 没开" 的排错提示
+- **`skills/harness-init/resources/init-prompt.md`**: byte-identical 同步上述文档
+
+### Changed
+
+- **`tests/run.js` stdout 契约**: 新增 `"stdout": "empty"` 期望语义，表示 hook stdout 必须为空（Codex 兼容要求）。原 `"stdout": "passthrough"` 标记为 deprecated 但保留兼容
+- **全部 hook 场景测试**: 60+ 场景从 `"stdout": "passthrough"` 迁移到 `"stdout": "empty"`，确保回归覆盖新契约
+
+### Constraints
+
+- **新增 VH-13**: v0.8.0 发布后 Codex runtime hook JSON 不兼容 P0 bug 的根因分析（workspace + kit 双份）
+- **更新 C-GATE-04 加固 TODO**: `tests/e2e-acceptance-validate.sh` 应增加 "Codex session log 无 'hook (failed)'" 断言（下次迭代实施）
+
+### Migration Notes
+
+无需用户迁移。此 patch 只删代码、不改接口。升级路径：
+- Claude Code 用户：`bash update.sh` 即可（hook 行为保持不变）
+- Codex 用户：`bash update.sh --target codex` 后，原来每次 Bash 的 "invalid pre-tool-use JSON output" 噪声消失
+
 ## [0.8.0] - 2026-04-15
 
 ### Added

@@ -68,7 +68,7 @@
     "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -77,7 +77,7 @@
     "stdin": { "tool_name": "Bash", "tool_input": { "command": "git push --force-with-lease origin feature" } },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

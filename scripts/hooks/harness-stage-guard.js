@@ -3,7 +3,7 @@
 
 /**
  * Harness Stage Guard — 强制新 session 声明 Harness 阶段 + 监听 TaskCompleted 提醒 VERIFY
- * @version 0.8.0
+ * @version 0.8.1
  * 触发:
  *   - PreToolUse:*（Bash, Edit, Write, Agent, Read, Grep, Glob, WebFetch, WebSearch, TaskUpdate）
  *   - TaskCompleted lifecycle event (v0.6.3 迁移自原 PreToolUse:TaskUpdate + status==completed 检测)
@@ -361,7 +361,6 @@ process.stdin.on('end', () => {
         );
       }
       // TaskCompleted 是 observability-style event，不阻止
-      process.stdout.write(raw);
       return;
     }
 
@@ -395,7 +394,6 @@ process.stdin.on('end', () => {
         // 读失败 (e.g. symlink) → 走 reminder 路径强制重新声明
         process.stderr.write(REMINDER);
         shouldBlock = true;
-        process.stdout.write(raw);
         process.exit(2);
       }
       const data = JSON.parse(stageRaw);
@@ -471,7 +469,6 @@ process.stdin.on('end', () => {
           } catch {}
           // 阶段切换 Write 放行（如果 Gate 检查通过）
           process.stderr.write(`[Harness Stage Guard] 阶段切换：允许写入 ${writePath}\n`);
-          process.stdout.write(raw);
           return;
         }
 
@@ -539,7 +536,6 @@ process.stdin.on('end', () => {
 
   if (shouldBlock) {
     process.exit(2);
-  } else {
-    process.stdout.write(raw);
   }
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });

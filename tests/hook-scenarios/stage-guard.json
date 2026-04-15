@@ -65,7 +65,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["PLAN 阶段"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -78,7 +78,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -137,7 +137,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["Harness 模式已关闭"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -151,7 +151,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["EXECUTE", "TDD"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -165,7 +165,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["超过 2 小时"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -341,7 +341,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["交付前", "真实验证", "push 提醒", "@{u}..HEAD"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -355,7 +355,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记任务完成", "标记 任务"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -377,7 +377,7 @@
         "迁移 TaskUpdate→TaskCompleted",
         "VERIFY"
       ],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -395,7 +395,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["在 VERIFY 阶段标记 任务 #24", "VERIFY"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -413,7 +413,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记 任务"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -430,7 +430,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记 任务"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -443,7 +443,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记 任务"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -459,7 +459,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记 任务"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -476,7 +476,7 @@
       "exitCode": 0,
       "stderr": ["在 EXECUTE 阶段标记 任务 完成", "VERIFY"],
       "stderrNot": ["任务 #"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -490,7 +490,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["第一次工具调用"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -504,7 +504,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["标记任务完成"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -518,7 +518,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["PLAN 阶段"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -532,7 +532,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["PLAN 阶段"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -545,7 +545,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -559,7 +559,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["PLAN 阶段禁止"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {

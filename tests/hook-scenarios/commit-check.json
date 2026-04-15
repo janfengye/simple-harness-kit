@@ -9,7 +9,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["Co-Authored-By"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -22,7 +22,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["缺少 Co-Authored-By"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -34,7 +34,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -47,7 +47,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["Co-Authored-By 格式不符合", "Claude Code (claude-opus-4-6)"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -60,7 +60,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["Co-Authored-By 格式不符合"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -73,7 +73,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["Co-Authored-By 格式不符合"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -86,7 +86,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["格式不符合"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -99,7 +99,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["格式不符合"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

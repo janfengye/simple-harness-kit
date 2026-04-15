@@ -3,7 +3,7 @@
 
 /**
  * Context Monitor Hook — 上下文预算监控
- * @version 0.8.0
+ * @version 0.8.1
  * 触发: PreToolUse:Edit, PreToolUse:Write
  *
  * 跟踪工具调用次数，超过阈值时提醒 compact。
@@ -47,5 +47,5 @@ process.stdin.on('end', () => {
       );
     }
   } catch {}
-  process.stdout.write(raw);
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });

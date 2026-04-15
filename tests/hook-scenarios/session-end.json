@@ -12,7 +12,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/observations.jsonl": { "exists": false },
         ".harness/session-log.md": {
@@ -113,7 +113,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/observations.jsonl": { "contains": "tool" },
         ".harness/session-log.md": { "exists": false }

@@ -3,7 +3,7 @@
 
 /**
  * Agent Check Hook — 修复类 Agent 必须引用 Constraint ID
- * @version 0.8.0
+ * @version 0.8.1
  * 触发: PreToolUse:Agent
  *
  * 不阻止执行，但发出警告。
@@ -37,5 +37,5 @@ process.stdin.on('end', () => {
       }
     }
   } catch {}
-  process.stdout.write(raw);
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });

@@ -21,7 +21,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -46,7 +46,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -59,7 +59,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -83,7 +83,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -97,7 +97,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["门控已被"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -106,7 +106,7 @@
     "stdin": { "tool_name": "Bash", "tool_input": { "command": "npm test" } },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -160,7 +160,7 @@
     "gitSetup": { "stage": ["install.sh"] },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -176,7 +176,7 @@
     "gitSetup": { "stage": ["skills/harness-init/SKILL.md"] },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -192,7 +192,7 @@
     "gitSetup": { "stage": ["docs/misc.md"] },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -207,7 +207,7 @@
     "gitSetup": { "stage": ["install.sh"] },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

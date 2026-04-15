@@ -14,7 +14,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/session-log.md": {
           "contains": "Bash 执行"
@@ -41,7 +41,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/observations.jsonl": {
           "contains": "\"status\":\"success\""
@@ -65,7 +65,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/session-log.md": {
           "contains": "Agent 派发"
@@ -90,7 +90,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/session-log.md": {
           "exists": false
@@ -129,7 +129,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/session-log.md": {
           "contains": [
@@ -183,7 +183,7 @@
     },
     "expect": {
       "exitCode": 0,
-      "stdout": "passthrough",
+      "stdout": "empty",
       "files": {
         ".harness/session-log.md": {
           "contains": [

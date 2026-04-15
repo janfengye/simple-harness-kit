@@ -116,6 +116,40 @@ node <KIT_ROOT>/scripts/generate-codex-hooks.js --input .claude/settings.json --
 
 格式与 settings.json 完全一致，只是过滤掉了 Codex 不支持的事件。
 
+### 日常启动 Codex（init 完成之后）
+
+init 完成后，`.codex/hooks.json` 已存在。**日常启动不需要 `--full-auto`** —— `--full-auto` 只为 init 时创建 `.codex/` 目录服务，一旦目录存在，默认 `workspace-write` sandbox 已足够。
+
+日常启动只需保证 `codex_hooks` feature flag 打开：
+
+```bash
+# 方式 1（推荐）：写入 ~/.codex/config.toml 一劳永逸
+#   [features]
+#   codex_hooks = true
+# 然后直接：
+codex                      # 交互模式，默认 workspace-write sandbox
+codex exec "<任务>"         # 非交互执行
+
+# 方式 2：命令行每次显式开启
+codex --enable codex_hooks
+codex exec --enable codex_hooks "<任务>"
+```
+
+**sandbox 选择**：
+- 日常用默认 `workspace-write` 即可（读 `.codex/hooks.json` + 写项目目录都不受限）
+- 只有当任务需要写项目外文件或访问网络时，才升级到 `--full-auto`
+
+**与 Claude Code 日常启动的差异**：
+
+| 项 | Claude Code | Codex |
+|---|---|---|
+| feature flag | 无需 | 必须 `codex_hooks = true`（config.toml 或 `--enable`） |
+| sandbox | 无 | 默认 `workspace-write` 够用 |
+| 首次 init | 直接启动 | 首次必须 `--full-auto` 才能创建 `.codex/` |
+| 后续 session | 直接启动 | 配好 config.toml 后也直接启动 |
+
+**排错**：如果日常 session 发现 Harness hook 完全不触发（`.harness/observations.jsonl` 无新增、没有阶段声明 banner）→ 99% 是 `codex_hooks` flag 没开。先检查 `~/.codex/config.toml` 有没有 `[features] codex_hooks = true`，或临时加 `--enable codex_hooks` 验证。
+
 ## settings.json 最小配置
 
 settings.json 必须至少包含以下 Hook 注册。**真实源是 `tests/required-wiring.json`** —— 模板/validate.sh/此配置块都从它派生，本节由 `template-integrity.js` 强制对齐，不允许手工漂移：

@@ -3,7 +3,7 @@
 
 /**
  * Session End Hook — session 结束时的收尾动作
- * @version 0.8.0
+ * @version 0.8.1
  * 触发: SessionEnd lifecycle event
  *
  * 职责:
@@ -38,7 +38,6 @@ process.stdin.on('data', chunk => {
 process.stdin.on('end', () => {
   // 完全关闭
   if (process.env.HARNESS_LOG === 'off') {
-    process.stdout.write(raw);
     return;
   }
 
@@ -47,7 +46,6 @@ process.stdin.on('end', () => {
 
     // 防御：只处理 SessionEnd 事件（避免被其他调用误触发）
     if (input.hook_event_name !== 'SessionEnd') {
-      process.stdout.write(raw);
       return;
     }
 
@@ -82,6 +80,5 @@ process.stdin.on('end', () => {
       fs.appendFileSync(LOG_FILE, entry);
     } catch {}
   } catch {}
-
-  process.stdout.write(raw);
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });

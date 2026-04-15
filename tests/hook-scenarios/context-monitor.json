@@ -9,7 +9,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["Context Monitor"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

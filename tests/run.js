@@ -19,7 +19,8 @@
  *     "exitCode": 0,                       // 预期 exit code
  *     "stderr": ["关键词1"],               // stderr 必须包含
  *     "stderrNot": ["不应出现"],           // stderr 必须不包含
- *     "stdout": "passthrough",             // "passthrough" = stdout 应等于 stdin
+ *     "stdout": "empty",                   // "empty" = stdout 必须为空（Codex 兼容要求；推荐）
+ *                                          // "passthrough" = stdout 应等于 stdin（deprecated）
  *     "files": {                           // 可选：检查输出文件
  *       ".harness/observations.jsonl": { "contains": "tool" },
  *       // contains 可以是 string（单项）或 string[]（多项，全部必须命中）
@@ -225,8 +226,14 @@ function runScenario(scenario) {
       }
     }
 
-    // 检查 stdout passthrough
-    if (expect.stdout === 'passthrough') {
+    // 检查 stdout 契约
+    // "empty"（推荐）: stdout 必须为空（Codex 0.118.0 要求；Claude Code 也兼容）
+    // "passthrough"（deprecated，保留兼容旧场景）: stdout 应等于 stdin
+    if (expect.stdout === 'empty') {
+      if (stdout.length !== 0) {
+        errors.push(`stdout 必须为空，实际: ${JSON.stringify(stdout.slice(0, 80))}`);
+      }
+    } else if (expect.stdout === 'passthrough') {
       if (stdout.trim() !== stdinData.trim()) {
         errors.push('stdout 未透传 stdin');
       }

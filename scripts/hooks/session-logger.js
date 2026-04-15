@@ -3,7 +3,7 @@
 
 /**
  * Session Logger Hook — 记录关键动作 + 结构化观察数据
- * @version 0.8.0
+ * @version 0.8.1
  * 触发:
  *   - PostToolUse:* (成功工具调用)
  *   - PostToolUseFailure (失败工具调用)
@@ -53,7 +53,6 @@ process.stdin.on('data', chunk => {
 process.stdin.on('end', () => {
   // 完全关闭
   if (process.env.HARNESS_LOG === 'off') {
-    process.stdout.write(raw);
     return;
   }
 
@@ -93,7 +92,6 @@ process.stdin.on('end', () => {
         fs.appendFileSync(OBS_FILE, JSON.stringify(sfObs) + '\n');
       }
 
-      process.stdout.write(raw);
       return;
     }
 
@@ -167,6 +165,5 @@ process.stdin.on('end', () => {
       fs.appendFileSync(OBS_FILE, JSON.stringify(observation) + '\n');
     }
   } catch {}
-
-  process.stdout.write(raw);
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });

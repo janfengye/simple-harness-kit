@@ -12,7 +12,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["未引用 Constraint ID"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -28,7 +28,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["未引用 Constraint ID"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -44,7 +44,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["Constraint ID"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

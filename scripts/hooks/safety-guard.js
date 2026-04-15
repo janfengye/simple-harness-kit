@@ -3,7 +3,7 @@
 
 /**
  * Safety Guard Hook — 拦截危险命令
- * @version 0.8.0
+ * @version 0.8.1
  * 触发: PreToolUse:Bash
  *
  * 根据项目需要添加/修改 BLOCKED 规则。
@@ -38,5 +38,7 @@ process.stdin.on('end', () => {
       }
     }
   } catch {}
-  process.stdout.write(raw);
+  // stdout 保持为空：Codex 0.118.0 要求 PreToolUse hook stdout 为合法响应 schema 或空；
+  // 原 passthrough (写回请求 JSON) 在 Codex 下会报 "invalid pre-tool-use JSON output"。
+  // Claude Code 对空 stdout 同样视为 allow-unchanged，行为一致。
 });

@@ -9,7 +9,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["交付前复盘", "流程合规", "QA 达标"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -22,7 +22,7 @@
     "expect": {
       "exitCode": 0,
       "stderr": ["交付前复盘"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   },
   {
@@ -35,7 +35,7 @@
     "expect": {
       "exitCode": 0,
       "stderrNot": ["交付前复盘"],
-      "stdout": "passthrough"
+      "stdout": "empty"
     }
   }
 ]

@@ -3,7 +3,7 @@
 
 /**
  * Verification Gate Hook — commit/push 前的阶段和证据检查
- * @version 0.8.0
+ * @version 0.8.1
  * 触发: PreToolUse:Bash
  *
  * 四重检查:
@@ -71,7 +71,6 @@ process.stdin.on('end', () => {
 
     if (!isCommit && !isPush) {
       // 非 git commit/push 命令，直接透传
-      process.stdout.write(raw);
       return;
     }
 
@@ -80,7 +79,6 @@ process.stdin.on('end', () => {
       process.stderr.write(
         '[Verification Gate] 门控已被 HARNESS_SKIP_GATE=1 跳过，请记录原因。\n'
       );
-      process.stdout.write(raw);
       return;
     }
 
@@ -111,7 +109,6 @@ process.stdin.on('end', () => {
         process.exit(2);
       }
       // REVIEW 阶段 push 放行
-      process.stdout.write(raw);
       return;
     }
 
@@ -182,7 +179,7 @@ process.stdin.on('end', () => {
       }
     }
   } catch {}
-  process.stdout.write(raw);
+  // stdout 保持为空（Codex 0.118.0 兼容，见 VH-13）
 });
 
 /**
