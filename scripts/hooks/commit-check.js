@@ -3,7 +3,7 @@
 
 /**
  * Commit Check Hook — 提交前检查两件事:
- * @version 0.7.0
+ * @version 0.8.0
  * 1. AI session 的 commit 必须包含 Co-Authored-By
  * 2. REVIEW 阶段检查是否有未提交变更（配合 verification-gate）
  *

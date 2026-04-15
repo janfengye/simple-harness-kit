@@ -3,7 +3,7 @@
 
 /**
  * Delivery Gate Hook — AI 输出文字前的合规检查
- * @version 0.7.0
+ * @version 0.8.0
  * 触发: Stop
  *
  * 在 AI 生成回复但还未展示给用户之前触发。

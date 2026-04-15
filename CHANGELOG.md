@@ -10,6 +10,41 @@
 
 （暂无新条目）
 
+## [0.8.0] - 2026-04-15
+
+### Added
+
+- **install.sh / update.sh 双工具支持**: 新增 `--target claude|codex|both` 参数 + 交互式选择菜单（TTY 感知），默认安装到所有已检测到的工具。装 Claude Code → `~/.claude/skills/`，装 Codex → `~/.codex/skills/`，both → 两处都装。支持 `--scope personal|project` (10734e5)
+- **`scripts/generate-codex-hooks.js`**: 从 `.claude/settings.json` 派生 `.codex/hooks.json`，过滤 Codex 不支持的事件（PostToolUseFailure / StopFailure / TaskCompleted / SessionEnd），保留 SessionStart / PreToolUse / PostToolUse / Stop / UserPromptSubmit (10734e5)
+- **`skills/harness-init` Step 3.5**: init 流程自动检测 Codex 环境（用户 prompt 提及 Codex / 存在 `.codex/` / `which codex`），自动生成 `.codex/hooks.json`，用户可跳过 (10734e5)
+- **`verification-gate.js` 第 4 层守门（C-GATE-07, VH-12 加固）**: 当 commit 触及 `install.sh` / `update.sh` / `init-prompt.md` / `SKILL.md` / `resources/init-prompt.md` / `generate-codex-hooks.js` 任一文件时，`verify-evidence.md` 必须同时含三个 runtime 标记（`独立 agent` / `Claude Code` / `Codex`），缺任一 `exit 2`。仅在 kit 仓库触发（`tests/template-integrity.js` 存在性检测），不影响 60+ 用户项目。紧急豁免：`HARNESS_SKIP_GATE=1` + commit message 记录原因 (ae1ba6e)
+- **`tests/run.js` gitSetup 支持**: scenario 可声明 `gitSetup: { stage: [...] }`，runner 在 tmp dir 内 `git init` 并 stage 指定文件，供 verification-gate C-GATE-07 场景测试 (ae1ba6e)
+- **5 个新 verification-gate 场景**: 覆盖 C-GATE-07 的正反路径（kit 触及入口文件 + 证据缺模式 → 阻止；kit 触及入口文件 + 证据齐全 → 放行；kit 触及非入口文件 → 放行；非 kit 触及同名文件 → 放行） (ae1ba6e)
+
+### Fixed
+
+- **`init-prompt.md`**: 删除"Codex 用 `--full-auto` 或 `-s workspace-write`"的错误描述，改为仅允许 `--full-auto`，并解释 sandbox 限制原因（Codex 0.118.0 在 `workspace-write` 下把 `.codex/` 视为受保护目录，`mkdir .codex` 会被拒绝）。E2E 实测验证 (4996c97)
+- **`skills/harness-init/resources/init-prompt.md`**: byte-identical 同步上述修复 (4996c97)
+
+### Changed
+
+- 12 个 hook 的 `@version` 统一 bump 0.7.0/0.7.4 → 0.8.0
+
+### Constraints
+
+- **新增 C-GATE-07** (kit-level meta): 用户入口变更强制三模式证据（实现在 `verification-gate.js`）
+- **新增 VH-12**: 记录 install.sh 双工具 PR 在 REVIEW 阶段主动豁免 C-GATE-04 的根因 + 机器守门补丁
+
+### Tests
+
+- 全量测试 136 passed, 0 failed（从 131 → +5 C-GATE-07 场景）
+
+### Migration Notes
+
+- **双工具用户**：`install.sh --target both` 或 `update.sh` 会同时维护 `~/.claude/skills/` 和 `~/.codex/skills/`，已安装任一的用户升级后会被正确检测
+- **Codex 用户**：init 时必须加 `--full-auto`（文档之前写的 `-s workspace-write` 在 0.118.0 下无效）
+- **kit 维护者**：修改用户入口文件时，verify-evidence 必须贴三个 runtime 实测结果，否则 commit 被阻。紧急情况用 `HARNESS_SKIP_GATE=1`
+
 ## [0.7.3] - 2026-04-11
 
 ### Fixed

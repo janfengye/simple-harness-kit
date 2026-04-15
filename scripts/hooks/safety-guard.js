@@ -3,7 +3,7 @@
 
 /**
  * Safety Guard Hook — 拦截危险命令
- * @version 0.7.0
+ * @version 0.8.0
  * 触发: PreToolUse:Bash
  *
  * 根据项目需要添加/修改 BLOCKED 规则。

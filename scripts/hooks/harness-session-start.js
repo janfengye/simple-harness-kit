@@ -3,7 +3,7 @@
 
 /**
  * Harness Session Start — 新 session 检测 harness 并输出入口 banner
- * @version 0.7.0
+ * @version 0.8.0
  * 触发: SessionStart
  *
  * 1. 删除 .harness/current-stage.json，迫使新 session 重新声明阶段
