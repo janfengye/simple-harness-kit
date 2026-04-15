@@ -97,11 +97,13 @@ Codex 支持的事件类型：SessionStart、PreToolUse、PostToolUse、UserProm
 
 ### init 命令
 
-Codex 执行 init 时必须使用 `--full-auto` 或 `-s workspace-write` 模式：
+Codex 执行 init **必须使用 `--full-auto`**（等价于 `--dangerously-bypass-approvals-and-sandbox`）：
 
 ```bash
 codex --full-auto --enable codex_hooks "Read <KIT_ROOT>/init-prompt.md and <KIT_ROOT>/methodology/. Initialize Harness for this project."
 ```
+
+**为什么不能用 `-s workspace-write`**：Codex 0.118.0 在 `workspace-write` sandbox 下把 `.codex/` 视为受保护目录，即使在用户自己的项目目录中，`mkdir .codex` 也会被拒绝（`Operation not permitted`）。结果是 `.codex/hooks.json` 无法生成，Step 3.5 失败。E2E 实测验证（VH-12）：必须 `--full-auto` 才能完成完整 init。
 
 ### .codex/hooks.json 生成
 
