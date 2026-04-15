@@ -95,11 +95,22 @@ function recentTimestamp() {
   return new Date(Date.now() - 60 * 1000).toISOString();
 }
 
+// 通用时间戳占位符替换：RECENT_TIMESTAMP + TS_OFFSET_<±N><S|M|H>
+// 例：TS_OFFSET_-15M = 15 分钟前；TS_OFFSET_+45M = 45 分钟后；TS_OFFSET_-7200S = 2 小时前
+// 用于 since drift 窗口边界测试（VH-14：新 30 分钟窗口验证）
+function substituteTimestamps(s) {
+  let out = String(s).replace(/RECENT_TIMESTAMP/g, recentTimestamp());
+  out = out.replace(/TS_OFFSET_([+-]?\d+)([SMH])/g, (_, n, unit) => {
+    const mult = unit === 'S' ? 1000 : unit === 'M' ? 60 * 1000 : 60 * 60 * 1000;
+    return new Date(Date.now() + parseInt(n, 10) * mult).toISOString();
+  });
+  return out;
+}
+
 function setupTempDir(scenario) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-test-'));
 
   if (scenario.setup) {
-    const recentTs = recentTimestamp();
     for (const [filePath, rawContent] of Object.entries(scenario.setup)) {
       const fullPath = path.join(tmpDir, filePath);
       fs.mkdirSync(path.dirname(fullPath), { recursive: true });
@@ -112,13 +123,12 @@ function setupTempDir(scenario) {
         // Optionally create the target file with given content first
         if (rawContent.target_content !== undefined) {
           fs.mkdirSync(path.dirname(target), { recursive: true });
-          fs.writeFileSync(target, String(rawContent.target_content).replace(/RECENT_TIMESTAMP/g, recentTs));
+          fs.writeFileSync(target, substituteTimestamps(rawContent.target_content));
         }
         fs.symlinkSync(target, fullPath);
       } else {
         // String form: write file with placeholder substitution
-        const content = String(rawContent).replace(/RECENT_TIMESTAMP/g, recentTs);
-        fs.writeFileSync(fullPath, content);
+        fs.writeFileSync(fullPath, substituteTimestamps(rawContent));
       }
     }
   }
@@ -165,9 +175,9 @@ function runScenario(scenario) {
   }
 
   const tmpDir = setupTempDir(scenario);
-  // stdin 也支持 RECENT_TIMESTAMP 占位符替换（测试场景可在 tool_input.content 等字段用此占位符）
+  // stdin 支持 RECENT_TIMESTAMP 与 TS_OFFSET_<±N><S|M|H> 占位符（见 substituteTimestamps）
   const stdinData = scenario.stdin
-    ? JSON.stringify(scenario.stdin).replace(/RECENT_TIMESTAMP/g, recentTimestamp())
+    ? substituteTimestamps(JSON.stringify(scenario.stdin))
     : '';
   const env = {
     ...process.env,

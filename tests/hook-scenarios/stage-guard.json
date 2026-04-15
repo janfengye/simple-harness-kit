@@ -724,5 +724,64 @@
       "exitCode": 2,
       "stderr": ["形状合法但日期值不合法"]
     }
+  },
+  {
+    "name": "stage-guard (VH-14): since 15 分钟前 → 放行（在 30 分钟窗口内）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"TS_OFFSET_-15M\",\"task\":\"within 30-min window\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["过于陈旧", "未来时间"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "stage-guard (VH-14): since 45 分钟前 → 阻止（超出 30 分钟窗口）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"TS_OFFSET_-45M\",\"task\":\"beyond 30-min window\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["过于陈旧", "1800 秒"]
+    }
+  },
+  {
+    "name": "stage-guard (VH-14): since 20 分钟后 → 放行（在 30 分钟窗口内）",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"TS_OFFSET_+20M\",\"task\":\"future within window\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["未来时间", "过于陈旧"],
+      "stdout": "empty"
+    }
   }
 ]

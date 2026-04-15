@@ -17,21 +17,28 @@
 - **Codex runtime hook JSON schema 兼容 (VH-13, P0)**: 删除 9 个 hook 共 19 处放行分支 `process.stdout.write(raw)` 调用。Codex 0.118.0 严格按决策响应 schema parse PreToolUse hook 的 stdout，原 passthrough 写回的是请求 JSON（`tool_name`/`tool_input`/`hook_event_name`），每次 Bash 调用都报 "PreToolUse hook (failed) - invalid pre-tool-use JSON output"。改用空 stdout + exit 0，两个 runtime 都视为 allow-unchanged。受影响文件：`harness-stage-guard.js`、`verification-gate.js`、`session-logger.js`、`session-end.js`、`safety-guard.js`、`context-monitor.js`、`agent-check.js`、`delivery-review.js`、`commit-check.js`
 - **`init-prompt.md` 日常启动 Codex 文档补齐**: 新增 "### 日常启动 Codex（init 完成之后）" 小节，说明 init 之后不需要 `--full-auto`、仍需 `codex_hooks` feature flag、默认 `workspace-write` sandbox 够用、与 Claude Code 差异对照表、以及 "hook 完全不触发 → 99% 是 flag 没开" 的排错提示
 - **`skills/harness-init/resources/init-prompt.md`**: byte-identical 同步上述文档
+- **`harness-stage-guard.js` since drift 窗口放宽 (VH-14)**: `SINCE_DRIFT_LIMIT` 从 5 分钟放宽到 30 分钟。用户反馈"经常出现时间戳不一致的问题"——AI 写 `.harness/current-stage.json` 需要手抄 `since` 字段，5 分钟窗口容错过小，跨 tool 调用的墙钟漂移频繁触壁。30 分钟窗口远大于正常 AI 手抄 drift，远小于"有意回拨到覆盖 evidence mtime"所需跨度，invariant 仍成立
 
 ### Changed
 
 - **`tests/run.js` stdout 契约**: 新增 `"stdout": "empty"` 期望语义，表示 hook stdout 必须为空（Codex 兼容要求）。原 `"stdout": "passthrough"` 标记为 deprecated 但保留兼容
 - **全部 hook 场景测试**: 60+ 场景从 `"stdout": "passthrough"` 迁移到 `"stdout": "empty"`，确保回归覆盖新契约
+- **`tests/run.js` 时间戳占位符**: 新增 `TS_OFFSET_<±N><S|M|H>` 通用占位符（如 `TS_OFFSET_-15M` = 15 分钟前），支持 since drift 边界场景测试；`RECENT_TIMESTAMP` 保留兼容
 
 ### Constraints
 
 - **新增 VH-13**: v0.8.0 发布后 Codex runtime hook JSON 不兼容 P0 bug 的根因分析（workspace + kit 双份）
+- **新增 VH-14**: 5 分钟 since drift 窗口过严的 UX 反馈 + 放宽到 30 分钟的决策依据（workspace + kit 双份）
 - **更新 C-GATE-04 加固 TODO**: `tests/e2e-acceptance-validate.sh` 应增加 "Codex session log 无 'hook (failed)'" 断言（下次迭代实施）
+
+### Tests
+
+- 全量测试 139 passed, 0 failed（从 136 → +3 VH-14 边界场景：15 分钟过去 PASS、45 分钟过去 REJECT、20 分钟未来 PASS）
 
 ### Migration Notes
 
-无需用户迁移。此 patch 只删代码、不改接口。升级路径：
-- Claude Code 用户：`bash update.sh` 即可（hook 行为保持不变）
+无需用户迁移。此 patch 只删代码 + 放宽常量、不改接口。升级路径：
+- Claude Code 用户：`bash update.sh` 即可（hook 行为保持不变，时间戳限制更宽松）
 - Codex 用户：`bash update.sh --target codex` 后，原来每次 Bash 的 "invalid pre-tool-use JSON output" 噪声消失
 
 ## [0.8.0] - 2026-04-15
