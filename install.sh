@@ -168,6 +168,73 @@ for DEST in "${DEST_LIST[@]}"; do
   total_installed=$((total_installed + installed))
 done
 
+# ── 持久化 kit 路径（供 harness-init Step 0 优先读取，避免每次都要让用户输入）──
+# 参见 SKILL.md Step 0 优先级 (2)。env var 仍是优先级 (1)。
+echo "$SCRIPT_DIR" > "$HOME/.simple-harness-kit-root"
+echo "已记录 kit 路径到 ~/.simple-harness-kit-root（供 harness-init 自动定位）"
+echo ""
+
+# ── 交互式 alias 设置（仅 Codex 装了才询问；非 TTY 跳过）──
+# 动机: codex 启动需要 --enable codex_hooks 才会触发 Hook，alias 把这事一劳永逸。
+# 等效原生方式: ~/.codex/config.toml 加 [features] codex_hooks=true。
+# 幂等: 用 marker 块检测，已存在跳过。
+if $install_codex; then
+  alias_marker_begin="# >>> simple-harness-kit alias >>>"
+  alias_marker_end="# <<< simple-harness-kit alias <<<"
+
+  # 检测 shell rc
+  shell_basename=$(basename "${SHELL:-/bin/zsh}")
+  case "$shell_basename" in
+    zsh)  rcfile="$HOME/.zshrc" ;;
+    bash) rcfile="$HOME/.bashrc" ;;
+    *)    rcfile="" ;;
+  esac
+
+  if [ -n "$rcfile" ]; then
+    if grep -qF "$alias_marker_begin" "$rcfile" 2>/dev/null; then
+      echo "Codex alias 已在 $rcfile 中（跳过，避免重复）。"
+      echo ""
+    else
+      echo "Codex alias 设置:"
+      echo "  alias codex='codex --enable codex_hooks'"
+      echo "  (alias 不递归: codex --full-auto 会展开成 codex --enable codex_hooks --full-auto)"
+      echo "  原生替代: ~/.codex/config.toml 加 [features] codex_hooks=true"
+      echo ""
+
+      if [ -t 0 ]; then
+        printf "添加到 %s? [Y]es / [n]o (打印让你手动加) / [s]kip silently: " "$rcfile"
+        read -r alias_choice
+      else
+        # 非 TTY (CI / 管道) 默认 skip，不打扰
+        alias_choice="s"
+      fi
+
+      case "${alias_choice:-y}" in
+        y|Y|yes|"")
+          {
+            echo ""
+            echo "$alias_marker_begin"
+            echo "# Auto-enable Harness hooks for codex. Bypass once: \\codex (escape with backslash)."
+            echo "# Or remove this block to disable."
+            echo "alias codex='codex --enable codex_hooks'"
+            echo "$alias_marker_end"
+          } >> "$rcfile"
+          echo "  已添加到 $rcfile。新 shell 生效，或现在: source $rcfile"
+          ;;
+        n|N|no)
+          echo ""
+          echo "  请手动添加到 $rcfile 末尾："
+          echo "    alias codex='codex --enable codex_hooks'"
+          ;;
+        s|S|skip|*)
+          echo "  跳过 alias 设置。"
+          ;;
+      esac
+      echo ""
+    fi
+  fi
+fi
+
 # ── 后续指引 ──
 
 echo "用户手动触发:"
@@ -193,9 +260,10 @@ if $install_claude; then
 fi
 
 if $install_codex; then
-  echo "  2. [Codex CLI] 启动:"
-  echo "     codex --full-auto --enable codex_hooks \"/harness-init\""
-  echo "     (确保 codex_hooks feature flag 已启用)"
+  echo "  2. [Codex CLI] 启动 — init 必须 TUI 模式（exec 模式 non-interactive，定位 kit 时会卡死）:"
+  echo "     codex --full-auto                      # 已设 alias 时（自动 --enable codex_hooks）"
+  echo "     codex --full-auto --enable codex_hooks # 未设 alias 或临时启用"
+  echo "     启动后输入: \$harness-init              # Codex 用 \$ 不是 / 触发 skill"
 fi
 
 echo ""

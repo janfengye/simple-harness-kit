@@ -8,10 +8,37 @@
 
 > 这些变更已 commit 但未打 tag。下次发版时整理到具体版本号下。
 
+（暂无新条目）
+
+## [0.8.3] - 2026-04-16
+
+### Added
+
+- **install.sh / update.sh 写 `~/.simple-harness-kit-root`**: 持久化 kit 绝对路径到家目录单文件。`harness-init` Step 0 优先读取此文件（仅次于 `SIMPLE_HARNESS_KIT_ROOT` 环境变量），用户运行过 install 即不必再手动告诉 kit 在哪。每次 update.sh 也刷新（kit 移动后路径同步）
+- **install.sh 交互式询问 alias**: Codex 安装后询问"是否将 `alias codex='codex --enable codex_hooks'` 写入 `~/.zshrc` / `~/.bashrc`?"。三选: `[Y]es 自动写` / `[n]o 打印让你手动加` / `[s]kip silently`。用 `# >>> simple-harness-kit alias >>>` 标记块幂等，二次 install 检测到跳过。非 TTY (CI / 管道) 默认 skip 不打扰
+- **SKILL.md Step 0 主动扫描 + 用户确认**: 优先级改为 `env > 文件 > 主动扫描 > 手动`。主动扫描候选含 `~/simple-harness-kit` / `~/ops/...` / `~/Projects/...` / `~/code/...` / `~/Dropbox/*/simple-harness-kit`，每个候选做 7 锚点完整性校验，校验通过的列给用户确认（C-SKILL-02 显式确认仍然强制）
+- **SKILL.md Codex 模式提示**: 检测到 exec (non-interactive) 模式且 kit 路径需要交互定位时，AI 应直接退出并提示用户改用 TUI
+
 ### Fixed
 
-- **`init-prompt.md` 加 Codex skill 触发 sigil 文档**: 明确说明 Codex 0.118.0 用 `$skill-name`（不是 `/skill-name`），TUI `/` 只认内置命令。包含 3 种触发方式对比表 + Claude Code vs Codex 行为差异表 + zsh 转义提示。byte-identical 同步到 `skills/harness-init/resources/init-prompt.md`
-- **VH-15 现场重现**: 用户在另一台机器（pre-VH-13 hooks 残留）成功重现 "PreToolUse hook (failed) - invalid pre-tool-use JSON output"。确认 VH-15 真实 root cause 是"target 项目 hook 副本未随 kit 升级"，非理论 case。立即 fix: 在该项目跑 `bash <kit>/update.sh --hooks` 刷新到 v0.8.2
+- **`init-prompt.md` Codex skill 触发 sigil 文档** (来自 v0.8.2 后续): 明确 Codex 0.118.0 用 `$skill-name`（不是 `/skill-name`），TUI `/` 只认内置命令。包含 3 种触发方式对比表 + Claude Code vs Codex 行为差异表 + zsh 转义提示
+- **`init-prompt.md` 强调 init 必须 TUI**: 删除"`codex exec --full-auto --enable codex_hooks "/harness-init"`"建议（exec 模式无法回答 Step 0 问 kit 路径，会卡死或乱跳）。改为：必须 TUI 模式启动 codex 后输入 `$harness-init`
+- **install.sh "下一步" Codex 段同步**: 删除 `codex exec`，改为 TUI 模式 + `$harness-init` 触发
+
+### Constraints
+
+- **更新 C-SKILL-02**: Step 0 优先级新增 (2) `~/.simple-harness-kit-root` 文件读取，与 env var 同列为"用户已显式信任的源"，校验通过即可使用，无需再问
+- **VH-15 后续确认**: 用户在另一台机器（pre-VH-13 hooks 残留）成功重现 "PreToolUse hook (failed)"。确认 VH-15 真实 root cause 是 target 项目 hook 副本未随 kit 升级。立即 fix: `bash <kit>/update.sh --hooks <project>`
+
+### Migration Notes
+
+- **现有用户 (v0.8.x)**: `git pull && bash install.sh` 一次即可，会询问 alias 并写 kit-root 文件
+- **新机器**: `git clone ... && bash install.sh` 流程不变，新增 alias 询问步骤
+- **Codex 用户重要**: 如果你之前用 `codex exec "/harness-init"` 跑 init —— 这个会卡，换成：
+  ```
+  codex --full-auto --enable codex_hooks   # TUI
+  $harness-init                            # 在 TUI 里输（$ 不是 /）
+  ```
 
 ## [0.8.2] - 2026-04-16
 

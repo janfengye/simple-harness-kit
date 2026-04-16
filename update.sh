@@ -191,5 +191,12 @@ if [ -n "$PROJECT_DIR" ]; then
 fi
 
 echo ""
+
+# ── 刷新 kit 路径（kit 可能被移动）──
+# install.sh 也写这个文件；update.sh 同步以防 kit 路径变化。
+echo "$SCRIPT_DIR" > "$HOME/.simple-harness-kit-root"
+echo "已刷新 kit 路径到 ~/.simple-harness-kit-root"
+echo ""
+
 echo "完成。新 session 生效。"
 echo ""

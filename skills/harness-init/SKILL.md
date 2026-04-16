@@ -41,9 +41,22 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 本 skill 已自包含 4 个关键资源（`./resources/` 下），Step 1 全部从 resources/ 读取。
 但 Step 3 需要把 kit 的 `scripts/hooks/*.js` 和 `templates/rules/*.tmpl` 拷贝到目标项目——这一步需要知道 kit 仓库在哪。
 
-**定位顺序**（取第一个命中）：
+**定位顺序**（取第一个命中且锚点校验通过的）：
 1. 环境变量 `SIMPLE_HARNESS_KIT_ROOT` 指向的目录（若用户显式设置，最可信）
-2. 询问用户 + 4 个常见位置作为建议：`~/simple-harness-kit`、`~/ops/simple-harness-kit`、`~/Projects/simple-harness-kit`、`~/code/simple-harness-kit`
+2. `~/.simple-harness-kit-root` 文件第一行（install.sh / update.sh 写入，用户运行过 install 即有）
+3. 主动扫描以下候选位置 + 当前 SKILL.md 文件位置向上回溯（如 skill 在 `$HOME/.codex/skills/harness-init/SKILL.md`，回溯到 `$HOME/` 不会找到 kit；但若是 project-scope 装在 project root 的 `.claude/skills/harness-init/`，向上找可能命中 project root 下的 `simple-harness-kit/`）：
+   - `~/simple-harness-kit`
+   - `~/ops/simple-harness-kit`
+   - `~/Projects/simple-harness-kit`
+   - `~/code/simple-harness-kit`
+   - `~/Dropbox/*/simple-harness-kit`（常见 Dropbox 结构）
+
+   每个候选都必须做下面的 7 锚点校验。校验通过的候选**列出来让用户确认/选择**（多个候选时让用户输入数字），不得静默使用。
+4. 让用户手动输入 kit 绝对路径
+
+**优先级 (1) 和 (2)** 是用户已显式信任的源（设了 env var / 跑过 install.sh），校验通过即可使用，不必再问。
+**优先级 (3)** 是自动扫描，校验通过的候选必须显式让用户确认。
+**优先级 (4)** 是兜底。
 
 **禁止**（C-SKILL-02, VH-10 后加强的 trust model 规则）：
 - **不得**在用户当前 cwd 或其父目录自动"向上查找 `simple-harness-kit/`"然后静默使用。如果用户在 `/tmp/untrusted-project` 下工作，而该目录恰好有 `simple-harness-kit/` 子目录，自动信任这个"子目录" = supply-chain 攻击：恶意 kit 的 `install.sh` / `templates/rules/*.tmpl` / `scripts/hooks/*.js` 会被写入用户项目。必须用户显式确认。
@@ -58,11 +71,14 @@ description: 为当前项目初始化完整的 Harness Engineering 配置（Rule
 
   这 7 个锚点都是 kit 长期稳定的文件。任一不满足 → 拒绝使用该候选，回到定位流程 next priority。
 
-- **必须**：除非 `SIMPLE_HARNESS_KIT_ROOT` 环境变量明确设置，否则**任何**自动定位的 kit 路径在使用前都要**显式告诉用户**："我打算用 `$CAND` 作为 kit 仓库，这是你的安装位置吗？(确认/否)"。得到用户确认后才继续 Step 3/4。如果用户不确认 → 询问绝对路径。
+- **必须**：优先级 (3) 主动扫描定位到候选 kit 路径时，**必须显式告诉用户**："我打算用 `$CAND` 作为 kit 仓库，这是你的安装位置吗？(确认/否)"。得到用户确认后才继续 Step 3/4。如果用户不确认 → 进入优先级 (4) 询问绝对路径。
+- 优先级 (1)（env var）和 (2)（`~/.simple-harness-kit-root` 文件）已是用户显式信任的源（设了变量 / 跑过 install.sh 自己写的），校验通过后可直接使用，无需再问。
 
 **反模式**（禁止）：
 - 直接写 `simple-harness-kit/...` 这样的 cwd-relative 路径（VH-10 问题 B）
 - 自动信任 cwd 向上搜索到的 `simple-harness-kit/`（VH-10 Codex gpt-5.4 round 3 F3 发现的 supply-chain 风险）
+
+**Codex 模式提示**：如果你检测到当前是 Codex `exec` (non-interactive) 模式（hook stdin 的 `permission_mode === "bypassPermissions"` 且无法等待用户输入），且优先级 (1) (2) 都没命中、(3) 多个候选需要用户选择 / 确认 → 直接退出并提示用户："Codex exec 模式无法交互回答 kit 路径，请改用 TUI: 关掉当前会话, 跑 `codex --full-auto`, 进入 TUI 后再输 `\$harness-init`"。强行猜路径或继续 = VH-15 类回归。
 
 ### Step 1: 读取真实源（全部 skill-relative，cwd 无关）
 

@@ -97,13 +97,26 @@ Codex 支持的事件类型：SessionStart、PreToolUse、PostToolUse、UserProm
 
 ### init 命令
 
-Codex 执行 init **必须使用 `--full-auto`**（等价于 `--dangerously-bypass-approvals-and-sandbox`）：
+Codex 执行 init **必须使用 `--full-auto` + TUI 模式**（不能用 `codex exec` non-interactive）：
 
 ```bash
-codex --full-auto --enable codex_hooks "Read <KIT_ROOT>/init-prompt.md and <KIT_ROOT>/methodology/. Initialize Harness for this project."
+# ✅ 正确（TUI 模式）：
+codex --full-auto --enable codex_hooks
+# 进入 TUI 后输入：
+$harness-init
+# 注意：是 $ 不是 /（详见后文 "在 Codex 里触发 skill"）
+
+# ❌ 错误：codex exec 是 non-interactive，init 流程问 kit 路径时会卡死或时序错乱
+codex exec --full-auto --enable codex_hooks "/harness-init"   # 不要用
 ```
 
-**为什么不能用 `-s workspace-write`**：Codex 0.118.0 在 `workspace-write` sandbox 下把 `.codex/` 视为受保护目录，即使在用户自己的项目目录中，`mkdir .codex` 也会被拒绝（`Operation not permitted`）。结果是 `.codex/hooks.json` 无法生成，Step 3.5 失败。E2E 实测验证（VH-12）：必须 `--full-auto` 才能完成完整 init。
+**为什么必须 TUI**：init Step 0 需要交互定位 kit 仓库（询问/确认路径）。`exec` 模式没有 stdin 回路，AI 提的问题没人回答，要么超时要么乱跳。VH-15 现场已确认。
+
+**为什么必须 `--full-auto`**：Codex 0.118.0 在 `workspace-write` sandbox 下把 `.codex/` 视为受保护目录，即使在用户自己的项目目录中，`mkdir .codex` 也会被拒绝（`Operation not permitted`）。结果是 `.codex/hooks.json` 无法生成，Step 3.5 失败。E2E 实测验证（VH-12）：必须 `--full-auto` 才能完成完整 init。
+
+**install.sh 已经为你做了什么**：
+- 写入 `~/.simple-harness-kit-root` 文件 → harness-init Step 0 自动定位 kit，不必手输
+- 询问是否加 `alias codex='codex --enable codex_hooks'` 到 shell rc → 之后 `codex` 命令自动启用 hooks，省去每次 `--enable codex_hooks`
 
 ### .codex/hooks.json 生成
 
@@ -120,20 +133,29 @@ node <KIT_ROOT>/scripts/generate-codex-hooks.js --input .claude/settings.json --
 
 init 完成后，`.codex/hooks.json` 已存在。**日常启动不需要 `--full-auto`** —— `--full-auto` 只为 init 时创建 `.codex/` 目录服务，一旦目录存在，默认 `workspace-write` sandbox 已足够。
 
-日常启动只需保证 `codex_hooks` feature flag 打开：
+日常启动只需保证 `codex_hooks` feature flag 打开。**3 种方式择一即可**：
 
 ```bash
-# 方式 1（推荐）：写入 ~/.codex/config.toml 一劳永逸
+# 方式 1（最推荐）：用 install.sh 询问时选 [Y]，写 alias 到 ~/.zshrc / ~/.bashrc
+#   alias codex='codex --enable codex_hooks'
+# 之后所有 codex 命令自动启用（alias 不递归，不会无限展开）：
+codex                       # 实际跑 codex --enable codex_hooks
+codex --full-auto           # 实际跑 codex --enable codex_hooks --full-auto
+codex exec "<任务>"          # 实际跑 codex --enable codex_hooks exec "<任务>"
+
+# 方式 2（原生）：写入 ~/.codex/config.toml 一劳永逸
 #   [features]
 #   codex_hooks = true
 # 然后直接：
 codex                      # 交互模式，默认 workspace-write sandbox
 codex exec "<任务>"         # 非交互执行
 
-# 方式 2：命令行每次显式开启
+# 方式 3：命令行每次显式开启（最啰嗦，不推荐）
 codex --enable codex_hooks
 codex exec --enable codex_hooks "<任务>"
 ```
+
+**临时绕过 alias**（极少需要）：用反斜杠转义 `\codex`，跳过 alias 展开。
 
 **sandbox 选择**：
 - 日常用默认 `workspace-write` 即可（读 `.codex/hooks.json` + 写项目目录都不受限）
