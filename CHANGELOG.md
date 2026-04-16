@@ -10,6 +10,27 @@
 
 （暂无新条目）
 
+## [0.8.6] - 2026-04-16
+
+### Added
+
+- **`tests/codex-init-smoke.sh`** — `$harness-init` 完整 E2E 自动化补齐 C-GATE-04 在 skill 入口的盲区
+  - tmp 项目 + 预设 `SIMPLE_HARNESS_KIT_ROOT` env var → SKILL.md Step 0 优先级 (1) 命中跳过交互
+  - `codex exec --dangerously-bypass-approvals-and-sandbox --enable codex_hooks --skip-git-repo-check --ephemeral '$harness-init'` 触发
+  - 断言 6 类产物：必选文件存在 / settings.json JSON 有效含 SessionStart+PreToolUse+PostToolUse / hook 脚本 ≥ 6 个含 5 必选 / 无 passthrough stdout / .codex/hooks.json JSON 有效（warn 级）/ codex 日志无 hook failed 标记
+  - 默认 SKIP（opt-in via `CODEX_INIT_SMOKE=1`），单次跑 ~5 分钟
+  - 集成到 `tests/run.js` 末尾（默认 SKIP，不卡日常 run）
+
+### Constraints
+
+- **C-GATE-04 自动化层补齐**: skill 入口 (`$harness-init`) E2E 之前只能手测，现在 `CODEX_INIT_SMOKE=1` 可机器跑。release 前 `CODEX_INIT_SMOKE=1 node tests/run.js` 双 smoke 全过
+
+### Implementation Notes
+
+发现并修了 2 个断言 bug（写在第一版自验里）：
+1. `Stop` 事件不在 `tests/required-wiring.json` 必选清单（关联 optional 的 delivery-gate.js），原来误判为必选
+2. `hook (failed)` / `invalid pre-tool-use JSON output` 这些字符串作为引用文字出现在 `docs/constraints.md` (VH-13/VH-15 描述里)，被 codex 写文件后 echo 到 log 误匹配。改用严格行首/缩进锚点：`^hook: <Event> Failed$` / `^[[:space:]]+error: hook returned invalid` 区分 codex emission 和文件内容
+
 ## [0.8.5] - 2026-04-16
 
 ### Documentation

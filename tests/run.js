@@ -484,9 +484,36 @@ try {
   console.log(`  Codex Smoke FAIL: ${e.message}\n`);
 }
 
-const totalFailed = failed + tpl.fail + scriptedFailed + smokeFailed;
-const totalTests = scenarios.length + tpl.results.length + scriptedTotal + smokeTotal;
+// ── Codex Init E2E Smoke (C-GATE-04 skill 入口自动化补齐) ──
+// $harness-init 完整流程跑一遍，断言所有必选产物。比 codex-smoke 慢得多
+// (~5 分钟一次)，所以 opt-in: CODEX_INIT_SMOKE=1 才执行；默认 SKIP 不卡 run.js。
+let initSmokeFailed = 0;
+let initSmokeTotal = 0;
+try {
+  const initSmokeScript = path.resolve(__dirname, 'codex-init-smoke.sh');
+  if (fs.existsSync(initSmokeScript)) {
+    console.log('  Codex Init E2E Smoke (C-GATE-04 skill 入口)\n');
+    const res = require('child_process').spawnSync('bash', [initSmokeScript], {
+      stdio: 'inherit',
+      env: process.env,
+      timeout: 12 * 60 * 1000, // init 流程要慢，给 12 分钟外层硬上限
+    });
+    initSmokeTotal += 1;
+    if (res.status !== 0) {
+      initSmokeFailed += 1;
+      console.log(`\n  Codex Init Smoke FAIL (exit ${res.status})\n`);
+    } else {
+      console.log(`\n  Codex Init Smoke PASS / SKIP\n`);
+    }
+  }
+} catch (e) {
+  initSmokeFailed = 1;
+  console.log(`  Codex Init Smoke FAIL: ${e.message}\n`);
+}
+
+const totalFailed = failed + tpl.fail + scriptedFailed + smokeFailed + initSmokeFailed;
+const totalTests = scenarios.length + tpl.results.length + scriptedTotal + smokeTotal + initSmokeTotal;
 console.log(`  ══════════════════════════════`);
-console.log(`  总计: ${passed + tpl.pass + (scriptedTotal - scriptedFailed) + (smokeTotal - smokeFailed)} passed, ${totalFailed} failed, ${totalTests} total\n`);
+console.log(`  总计: ${passed + tpl.pass + (scriptedTotal - scriptedFailed) + (smokeTotal - smokeFailed) + (initSmokeTotal - initSmokeFailed)} passed, ${totalFailed} failed, ${totalTests} total\n`);
 
 process.exit(totalFailed > 0 ? 1 : 0);
