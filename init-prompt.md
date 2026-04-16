@@ -150,6 +150,40 @@ codex exec --enable codex_hooks "<任务>"
 
 **排错**：如果日常 session 发现 Harness hook 完全不触发（`.harness/observations.jsonl` 无新增、没有阶段声明 banner）→ 99% 是 `codex_hooks` flag 没开。先检查 `~/.codex/config.toml` 有没有 `[features] codex_hooks = true`，或临时加 `--enable codex_hooks` 验证。
 
+### 在 Codex 里触发 skill（重要差异：用 `$` 不是 `/`）
+
+Codex 的 skill 触发机制和 Claude Code 不一样。Codex 0.118.0 在系统提示里告诉模型的原文规则（`codex-rs/core-skills/src/render.rs`）：
+
+> "If the user names a skill (with `$SkillName` or plain text) OR the task clearly matches a skill's description shown above, you must use that skill for that turn. Multiple mentions mean use them all. Do not carry skills across turns unless re-mentioned."
+
+**3 种触发方式**：
+
+| 方式 | 例子 | 精准度 |
+|---|---|---|
+| (1) Sigil 显式调用 | `$harness-init` | 最精准 |
+| (2) skill 名字 plain text | `用 harness-init 初始化` | 高 |
+| (3) description 语义匹配 | `初始化 harness 配置` | 中（依赖模型判断） |
+
+**关键差异**：
+
+| 行为 | Claude Code | Codex |
+|---|---|---|
+| TUI 里输入 `/skill-name` | ✅ 真正的 dispatcher，触发 skill | ❌ "Unrecognized command"（`/` 只认内置 `/help` `/clear` 等） |
+| TUI 里输入 `$skill-name` | 当文本进入对话 | ✅ 官方 sigil，触发 skill |
+| 自然语言描述触发 | ✅ | ✅ |
+| skill 跨轮持续 | ✅ 一旦激活后续轮自动维持 | ❌ **每轮必须重新提及** |
+
+**结论**：Codex 用户**统一用 `$skill-name` 触发**（如 `$harness-init`、`$harness-start`、`$harness-feedback`），不要用 `/`。
+
+CLI 模式里 `codex "/skill-name"` 之所以能 work，是因为 `/` 进入对话后被 AI 当作描述匹配 + 名字匹配触发——但这是侥幸，TUI 里就会被 slash 解析器拦截。统一 `$` 最稳。
+
+**zsh 注意**：`$` 在 shell 里有变量展开语义，命令行传入需要转义：
+```bash
+codex --full-auto --enable codex_hooks "\$harness-init"
+# 或加单引号：
+codex --full-auto --enable codex_hooks '$harness-init'
+```
+
 ## settings.json 最小配置
 
 settings.json 必须至少包含以下 Hook 注册。**真实源是 `tests/required-wiring.json`** —— 模板/validate.sh/此配置块都从它派生，本节由 `template-integrity.js` 强制对齐，不允许手工漂移：

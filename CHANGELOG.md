@@ -8,7 +8,10 @@
 
 > 这些变更已 commit 但未打 tag。下次发版时整理到具体版本号下。
 
-（暂无新条目）
+### Fixed
+
+- **`init-prompt.md` 加 Codex skill 触发 sigil 文档**: 明确说明 Codex 0.118.0 用 `$skill-name`（不是 `/skill-name`），TUI `/` 只认内置命令。包含 3 种触发方式对比表 + Claude Code vs Codex 行为差异表 + zsh 转义提示。byte-identical 同步到 `skills/harness-init/resources/init-prompt.md`
+- **VH-15 现场重现**: 用户在另一台机器（pre-VH-13 hooks 残留）成功重现 "PreToolUse hook (failed) - invalid pre-tool-use JSON output"。确认 VH-15 真实 root cause 是"target 项目 hook 副本未随 kit 升级"，非理论 case。立即 fix: 在该项目跑 `bash <kit>/update.sh --hooks` 刷新到 v0.8.2
 
 ## [0.8.2] - 2026-04-16
 
