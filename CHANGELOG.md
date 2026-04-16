@@ -10,6 +10,22 @@
 
 （暂无新条目）
 
+## [0.8.4] - 2026-04-16
+
+### Changed
+
+- **Codex alias 包含 `--full-auto`**: install.sh 询问的 alias 从 `codex --enable codex_hooks` 升级为 `codex --enable codex_hooks --full-auto`。一行覆盖 init + 日常 session，省去用户每次手动加 `--full-auto`。
+  - **动机**: 用户反馈"设置了 alias 以后为什么还要手动 --full-auto"。原 alias 只覆盖 `codex_hooks` flag，init 和日常都还得记得手动加 `--full-auto`，UX 不到位。
+  - **风险**: `--full-auto` = `workspace-write sandbox + on-request approval`，比 default 略宽松，但对开发场景是合理默认。bypass: `\codex` 反斜杠转义或 `command codex`。
+- **`init-prompt.md` 日常启动段重写**: 3 种方式对比表更新，明确"为什么 alias 要带 `--full-auto`"，加 escape alias 用法
+
+### Migration
+
+升级到 v0.8.4 后，**已装 v0.8.3 alias 的用户**：
+1. 跑 `bash install.sh` 不会重复写（幂等标记块检测到已存在跳过）
+2. **手动**编辑 `~/.zshrc` / `~/.bashrc` 把 `alias codex='codex --enable codex_hooks'` 改成 `alias codex='codex --enable codex_hooks --full-auto'`
+3. 或先删除 `# >>> simple-harness-kit alias >>>` 标记块再 `bash install.sh` 重写
+
 ## [0.8.3] - 2026-04-16
 
 ### Added

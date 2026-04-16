@@ -195,10 +195,11 @@ if $install_codex; then
       echo "Codex alias 已在 $rcfile 中（跳过，避免重复）。"
       echo ""
     else
-      echo "Codex alias 设置:"
-      echo "  alias codex='codex --enable codex_hooks'"
-      echo "  (alias 不递归: codex --full-auto 会展开成 codex --enable codex_hooks --full-auto)"
-      echo "  原生替代: ~/.codex/config.toml 加 [features] codex_hooks=true"
+      echo "Codex alias 设置（一行覆盖 init + 日常）:"
+      echo "  alias codex='codex --enable codex_hooks --full-auto'"
+      echo "  (--enable codex_hooks: 加载 Harness hooks)"
+      echo "  (--full-auto: workspace-write sandbox + on-request 审批，init 创建 .codex/ 必需)"
+      echo "  bypass once: \\codex (反斜杠转义) 或 'command codex'"
       echo ""
 
       if [ -t 0 ]; then
@@ -216,7 +217,7 @@ if $install_codex; then
             echo "$alias_marker_begin"
             echo "# Auto-enable Harness hooks for codex. Bypass once: \\codex (escape with backslash)."
             echo "# Or remove this block to disable."
-            echo "alias codex='codex --enable codex_hooks'"
+            echo "alias codex='codex --enable codex_hooks --full-auto'"
             echo "$alias_marker_end"
           } >> "$rcfile"
           echo "  已添加到 $rcfile。新 shell 生效，或现在: source $rcfile"
@@ -224,7 +225,7 @@ if $install_codex; then
         n|N|no)
           echo ""
           echo "  请手动添加到 $rcfile 末尾："
-          echo "    alias codex='codex --enable codex_hooks'"
+          echo "    alias codex='codex --enable codex_hooks --full-auto'"
           ;;
         s|S|skip|*)
           echo "  跳过 alias 设置。"
@@ -261,9 +262,9 @@ fi
 
 if $install_codex; then
   echo "  2. [Codex CLI] 启动 — init 必须 TUI 模式（exec 模式 non-interactive，定位 kit 时会卡死）:"
-  echo "     codex --full-auto                      # 已设 alias 时（自动 --enable codex_hooks）"
-  echo "     codex --full-auto --enable codex_hooks # 未设 alias 或临时启用"
-  echo "     启动后输入: \$harness-init              # Codex 用 \$ 不是 / 触发 skill"
+  echo "     codex                                          # 已设 alias 时（一行覆盖）"
+  echo "     codex --full-auto --enable codex_hooks         # 未设 alias"
+  echo "     启动后输入: \$harness-init                       # Codex 用 \$ 不是 / 触发 skill"
 fi
 
 echo ""

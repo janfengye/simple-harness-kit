@@ -116,7 +116,7 @@ codex exec --full-auto --enable codex_hooks "/harness-init"   # 不要用
 
 **install.sh 已经为你做了什么**：
 - 写入 `~/.simple-harness-kit-root` 文件 → harness-init Step 0 自动定位 kit，不必手输
-- 询问是否加 `alias codex='codex --enable codex_hooks'` 到 shell rc → 之后 `codex` 命令自动启用 hooks，省去每次 `--enable codex_hooks`
+- 询问是否加 `alias codex='codex --enable codex_hooks --full-auto'` 到 shell rc → 之后 `codex` 一行覆盖 init + 日常，不必每次加 `--full-auto --enable codex_hooks`
 
 ### .codex/hooks.json 生成
 
@@ -133,29 +133,36 @@ node <KIT_ROOT>/scripts/generate-codex-hooks.js --input .claude/settings.json --
 
 init 完成后，`.codex/hooks.json` 已存在。**日常启动不需要 `--full-auto`** —— `--full-auto` 只为 init 时创建 `.codex/` 目录服务，一旦目录存在，默认 `workspace-write` sandbox 已足够。
 
-日常启动只需保证 `codex_hooks` feature flag 打开。**3 种方式择一即可**：
+日常启动需要：(a) `codex_hooks` feature flag 打开，(b) 至少 `workspace-write` sandbox（否则写文件 / 创建 `.codex/` 失败）。**3 种方式择一即可**：
 
 ```bash
 # 方式 1（最推荐）：用 install.sh 询问时选 [Y]，写 alias 到 ~/.zshrc / ~/.bashrc
-#   alias codex='codex --enable codex_hooks'
-# 之后所有 codex 命令自动启用（alias 不递归，不会无限展开）：
-codex                       # 实际跑 codex --enable codex_hooks
-codex --full-auto           # 实际跑 codex --enable codex_hooks --full-auto
-codex exec "<任务>"          # 实际跑 codex --enable codex_hooks exec "<任务>"
+#   alias codex='codex --enable codex_hooks --full-auto'
+# 一行覆盖 init + 日常。alias 不递归，不会无限展开：
+codex                       # 实际跑 codex --enable codex_hooks --full-auto
+codex exec "<任务>"          # 实际跑 codex --enable codex_hooks --full-auto exec "<任务>"
+$harness-init               # init 直接 work，因为 alias 已带 --full-auto
 
-# 方式 2（原生）：写入 ~/.codex/config.toml 一劳永逸
+# 方式 2（原生 + 显式）：写入 ~/.codex/config.toml + 每次手动加 --full-auto
 #   [features]
 #   codex_hooks = true
-# 然后直接：
-codex                      # 交互模式，默认 workspace-write sandbox
-codex exec "<任务>"         # 非交互执行
+codex --full-auto           # init 时
+codex                       # 日常（如果 .codex/ 已存在且 sandbox 够，可省 --full-auto）
 
-# 方式 3：命令行每次显式开启（最啰嗦，不推荐）
-codex --enable codex_hooks
-codex exec --enable codex_hooks "<任务>"
+# 方式 3：每次都显式（最啰嗦，不推荐）
+codex --full-auto --enable codex_hooks
+codex exec --full-auto --enable codex_hooks "<任务>"
 ```
 
-**临时绕过 alias**（极少需要）：用反斜杠转义 `\codex`，跳过 alias 展开。
+**为什么 alias 要带 `--full-auto`**：
+- init 时必须有它（创建 `.codex/` 目录，详见上文）
+- 日常 session 也建议有：默认 sandbox 可能限制 codex 写文件 / 跑测试，`--full-auto` = `workspace-write` + `on-request` approval，是开发场景的合理默认
+
+**临时绕过 alias**（极少需要，如想用更紧的 sandbox）：
+```bash
+\codex --sandbox read-only         # 反斜杠转义跳过 alias
+command codex --sandbox read-only  # 等效
+```
 
 **sandbox 选择**：
 - 日常用默认 `workspace-write` 即可（读 `.codex/hooks.json` + 写项目目录都不受限）
