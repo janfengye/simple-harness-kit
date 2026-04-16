@@ -433,9 +433,60 @@ try {
   console.log(`  Scripted Matrix FAIL: ${e.message}\n`);
 }
 
-const totalFailed = failed + tpl.fail + scriptedFailed;
-const totalTests = scenarios.length + tpl.results.length + scriptedTotal;
+// ── Codex Runtime Smoke (C-GATE-08, VH-15) ──
+// 真正启动 codex CLI 跑一次 "Read README.md"，断言 hook 层无 "Failed" 告警。
+// 动机: VH-13 (passthrough stdout) 和假想的 VH-15 都是 Codex runtime 层 bug，
+// 静态 / 模板层完全无感。唯一可靠守门是真跑一次 codex。
+// 默认策略: 本地无 codex → SKIP + warn (不阻塞主流程);
+// CI 或强制模式: CODEX_REQUIRED=1 → 无 codex 升级为 FAIL.
+let smokeFailed = 0;
+let smokeTotal = 0;
+try {
+  const smokeScript = path.resolve(__dirname, 'codex-smoke.sh');
+  const selftestScript = path.resolve(__dirname, 'codex-smoke-selftest.sh');
+  if (fs.existsSync(smokeScript)) {
+    console.log('  Codex Runtime Smoke (C-GATE-08)\n');
+    const env = { ...process.env };
+    // run.js 里默认不升级；CI 通过 CODEX_REQUIRED=1 外部注入
+    const res = require('child_process').spawnSync('bash', [smokeScript], {
+      stdio: 'inherit',
+      env,
+      timeout: 5 * 60 * 1000,
+    });
+    smokeTotal += 1;
+    if (res.status !== 0) {
+      smokeFailed += 1;
+      console.log(`\n  Codex Smoke FAIL (exit ${res.status})\n`);
+    } else {
+      // 反向自测：确保 smoke 本身能捕获 bad hook
+      if (fs.existsSync(selftestScript)) {
+        const st = require('child_process').spawnSync('bash', [selftestScript], {
+          stdio: 'inherit',
+          env,
+          timeout: 5 * 60 * 1000,
+        });
+        smokeTotal += 1;
+        if (st.status !== 0) {
+          smokeFailed += 1;
+          console.log(`\n  Codex Smoke Selftest FAIL (exit ${st.status})\n`);
+        } else {
+          console.log(`\n  Codex Smoke + Selftest PASS\n`);
+        }
+      } else {
+        console.log(`\n  Codex Smoke PASS (selftest 脚本缺失)\n`);
+      }
+    }
+  } else {
+    console.log(`  Codex Smoke SKIP (脚本不存在: ${smokeScript})\n`);
+  }
+} catch (e) {
+  smokeFailed = 1;
+  console.log(`  Codex Smoke FAIL: ${e.message}\n`);
+}
+
+const totalFailed = failed + tpl.fail + scriptedFailed + smokeFailed;
+const totalTests = scenarios.length + tpl.results.length + scriptedTotal + smokeTotal;
 console.log(`  ══════════════════════════════`);
-console.log(`  总计: ${passed + tpl.pass + (scriptedTotal - scriptedFailed)} passed, ${totalFailed} failed, ${totalTests} total\n`);
+console.log(`  总计: ${passed + tpl.pass + (scriptedTotal - scriptedFailed) + (smokeTotal - smokeFailed)} passed, ${totalFailed} failed, ${totalTests} total\n`);
 
 process.exit(totalFailed > 0 ? 1 : 0);

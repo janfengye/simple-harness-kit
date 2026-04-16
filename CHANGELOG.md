@@ -10,6 +10,29 @@
 
 （暂无新条目）
 
+## [0.8.2] - 2026-04-16
+
+### Added
+
+- **Codex runtime 冒烟测试 (C-GATE-08, VH-15)**: 新增 `tests/codex-smoke.sh` — 在真实 Codex CLI 上执行 "Read README.md" 最小任务，断言 hook 层无 "hook: * Failed" / "hook returned invalid" 告警。默认策略：无 codex → SKIP + warn；`CODEX_REQUIRED=1` → 升级为 FAIL。兑现 VH-13 遗留的"加固 TODO"
+- **Smoke 反向自测**: 新增 `tests/codex-smoke-selftest.sh` — 注入一个 stdout 写非法 JSON 的坏 hook，断言 `codex-smoke.sh` 能正确 FAIL。防止 smoke 的 grep 断言因 Codex 输出格式变化而静默失效
+- **`tests/run.js` Codex Smoke 集成**: 在 hook scenarios + template integrity + scripted matrix 之后自动运行 smoke + selftest，结果纳入 run.js 总 pass/fail 统计
+
+### Constraints
+
+- **新增 C-GATE-08**: Codex runtime 兼容性必须机器守门 — `tests/codex-smoke.sh` + `codex-smoke-selftest.sh` + `tests/run.js` 集成。禁止"加固 TODO"模式
+- **新增 VH-15**: v0.8.1 后用户在 Codex `/harness-init` 仍报 "invalid JSON output"。调查结论：kit 代码无 bug（v0.8.1 hooks empty stdout 通过冒烟测试），最可能根因是 target 项目残留 pre-VH-13 旧 hook。真正教训：VH-13 "加固 TODO" 未当即兑现，用户仍是唯一回归 catcher
+
+### Tests
+
+- 全量 hook scenarios 139 PASS（不变）+ template integrity 19 PASS + Codex smoke PASS + selftest PASS
+
+### Migration Notes
+
+无需用户迁移。新增测试脚本不影响 hook 行为。升级路径：
+- `git pull && bash update.sh` 即可
+- 如果 target 项目仍有 Codex hook 报错，运行 `bash update.sh --hooks` 刷新项目 hook 脚本到 v0.8.2
+
 ## [0.8.1] - 2026-04-15
 
 ### Fixed
