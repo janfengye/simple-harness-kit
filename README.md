@@ -24,11 +24,32 @@ git clone https://github.com/duoglas/simple-harness-kit.git ~/simple-harness-kit
 bash ~/simple-harness-kit/install.sh
 ```
 
+`install.sh` will:
+- Install skills to `~/.claude/skills/` and/or `~/.codex/skills/` (auto-detect, or `--target claude|codex|both`)
+- Write `~/.simple-harness-kit-root` so `harness-init` can auto-locate the kit later
+- (Codex only) Ask if you want `alias codex='codex --enable codex_hooks --full-auto'` written to `~/.zshrc` / `~/.bashrc` — recommended; covers both `init` and daily use in one alias
+
 Update: `git -C ~/simple-harness-kit pull && bash ~/simple-harness-kit/install.sh`
 
 **Step 2: Initialize Harness for your project (once per project)**
 
-Enter your project directory, start Claude Code, and paste:
+Enter your project directory, then:
+
+```bash
+# Claude Code:
+claude              # start TUI
+# then in TUI:
+/harness-init
+
+# Codex (must be TUI mode — exec/non-interactive deadlocks at kit lookup):
+codex               # if you accepted the alias in Step 1, this is enough
+# OR if no alias:
+codex --full-auto --enable codex_hooks
+# then in TUI:
+$harness-init       # NOTE: $ not / — Codex skill trigger sigil is $
+```
+
+Or paste this prompt directly (works in both, no skill needed):
 
 ```
 Read ~/simple-harness-kit/init-prompt.md and the methodology/ directory.
@@ -48,8 +69,6 @@ Required steps:
 7. Remind me: hooks take effect in the NEXT session, I need to start a new one
 ```
 
-Or run `/harness-init` (requires Step 1 first).
-
 > **Important:** You must start a new session after init. Hooks don't take effect in the current session.
 
 **Step 3: Daily usage**
@@ -58,7 +77,8 @@ After starting a new session, Harness takes over automatically (hooks drive the 
 
 Option A — Skill (recommended, interactive):
 ```
-/harness-start
+/harness-start          # Claude Code
+$harness-start          # Codex (note the $ sigil)
 ```
 The skill asks for your feature description and automatically includes all constraints (PLAN pause, VERIFY evidence, delivery checklist).
 
@@ -71,7 +91,8 @@ Feature: implement XXX
 **Handling feedback:**
 
 ```
-/harness-feedback
+/harness-feedback       # Claude Code
+$harness-feedback       # Codex
 ```
 
 The skill asks for the issue and expected behavior, then runs F1-F5 automatically. Or manually: `[Harness Feedback] Issue: XXX Expected: YYY`.

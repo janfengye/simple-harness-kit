@@ -10,6 +10,16 @@
 
 （暂无新条目）
 
+## [0.8.5] - 2026-04-16
+
+### Documentation
+
+- **README.md / README.zh-CN.md 同步 v0.8.3 / v0.8.4 更新**:
+  - **Step 1**: 加 install.sh 行为说明（写 `~/.simple-harness-kit-root` + 询问 alias）
+  - **Step 2**: 拆分 Claude Code 和 Codex 启动命令；明确 Codex 必须 TUI 模式 + `$harness-init`（`$` 不是 `/`）
+  - **Step 3**: skill 触发示例同时给出 `/skill-name` (Claude) 和 `$skill-name` (Codex) 两种形式
+- 用户反馈："readme 更新了么" → README 之前漏掉了 v0.8.3/v0.8.4 几个核心 UX 改进，对新用户首屏完全不可见
+
 ## [0.8.4] - 2026-04-16
 
 ### Changed
