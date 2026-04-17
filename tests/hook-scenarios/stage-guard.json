@@ -783,5 +783,64 @@
       "stderrNot": ["未来时间", "过于陈旧"],
       "stdout": "empty"
     }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since=\"auto\" sentinel → 放行 (C-HOOK-09)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"auto\",\"task\":\"sentinel\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["未来时间", "过于陈旧", "不是合法 ISO8601"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since=\"now\" sentinel → 放行 (C-HOOK-09)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"VERIFY\",\"since\":\"now\",\"task\":\"sentinel now\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["未来时间", "过于陈旧", "不是合法 ISO8601"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "stage-guard: Write current-stage.json + since=\"invalid\" 仍被拒 (sentinel 白名单限 auto/now)",
+    "hook": "harness-stage-guard.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": ".harness/current-stage.json",
+        "content": "{\"stage\":\"EXECUTE\",\"since\":\"invalid\",\"task\":\"not a sentinel\"}"
+      }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"RECENT_TIMESTAMP\",\"task\":\"test\"}",
+      ".harness/tool-count.json": "{\"count\":1}"
+    },
+    "expect": {
+      "exitCode": 2,
+      "stderr": ["不是合法 ISO8601 时间戳"]
+    }
   }
 ]

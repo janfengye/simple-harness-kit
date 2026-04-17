@@ -1,0 +1,136 @@
+[
+  {
+    "name": "stage-since-autofill: since=auto → 覆写为真实 ISO",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"auto\",\"task\":\"sentinel test\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderr": ["Stage Since Autofill", "C-HOOK-09"],
+      "files": {
+        ".harness/current-stage.json": {
+          "contains": ["\"stage\": \"EXECUTE\"", "\"task\": \"sentinel test\""],
+          "containsNot": ["\"since\": \"auto\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "stage-since-autofill: since=now → 覆写为真实 ISO",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"PLAN\",\"since\":\"now\",\"task\":\"now sentinel\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "files": {
+        ".harness/current-stage.json": {
+          "containsNot": ["\"since\": \"now\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "stage-since-autofill: since 已是真实 ISO → 不改",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"2026-04-17T08:00:00.000Z\",\"task\":\"real iso\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderrNot": ["Stage Since Autofill"],
+      "files": {
+        ".harness/current-stage.json": {
+          "contains": ["\"since\":\"2026-04-17T08:00:00.000Z\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "stage-since-autofill: 非 current-stage.json 目标 → 不处理",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": "src/foo.js" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"auto\",\"task\":\"should not autofill\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderrNot": ["Stage Since Autofill"],
+      "files": {
+        ".harness/current-stage.json": {
+          "contains": ["\"since\":\"auto\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "stage-since-autofill: 非 Write tool → 不处理",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Edit",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{\"stage\":\"EXECUTE\",\"since\":\"auto\",\"task\":\"edit not write\"}"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderrNot": ["Stage Since Autofill"],
+      "files": {
+        ".harness/current-stage.json": {
+          "contains": ["\"since\":\"auto\""]
+        }
+      }
+    }
+  },
+  {
+    "name": "stage-since-autofill: 文件不存在 → 安静无 op",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderrNot": ["Stage Since Autofill", "Error"]
+    }
+  },
+  {
+    "name": "stage-since-autofill: 损坏 JSON → 安静无 op",
+    "hook": "stage-since-autofill.js",
+    "stdin": {
+      "tool_name": "Write",
+      "tool_input": { "file_path": ".harness/current-stage.json" }
+    },
+    "setup": {
+      ".harness/current-stage.json": "{corrupted json"
+    },
+    "expect": {
+      "exitCode": 0,
+      "stdout": "empty",
+      "stderrNot": ["Stage Since Autofill", "Error"]
+    }
+  }
+]

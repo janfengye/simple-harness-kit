@@ -3,7 +3,7 @@
 
 /**
  * Harness Stage Guard — 强制新 session 声明 Harness 阶段 + 监听 TaskCompleted 提醒 VERIFY
- * @version 0.8.1
+ * @version 0.8.7
  * 触发:
  *   - PreToolUse:*（Bash, Edit, Write, Agent, Read, Grep, Glob, WebFetch, WebSearch, TaskUpdate）
  *   - TaskCompleted lifecycle event (v0.6.3 迁移自原 PreToolUse:TaskUpdate + status==completed 检测)
@@ -269,10 +269,16 @@ function validateSince(newData) {
       '→ current-stage.json 必须包含 since 字段（真实当前时间）。\n' +
       '→ 请用 `date -u +%Y-%m-%dT%H:%M:%S.000Z` 获取当前时间写入 since。';
   }
+  // C-HOOK-09 (VH-14 Option A): "auto" / "now" sentinel 放行，由 PostToolUse:Write
+  // hook stage-since-autofill.js 立即覆写为真实 ISO。AI 不再需要手抄时间戳。
+  if (newData.since === 'auto' || newData.since === 'now') {
+    return null;
+  }
   if (typeof newData.since !== 'string' || !ISO8601_STRICT.test(newData.since)) {
     return `[Harness Stage Guard] since 字段不是合法 ISO8601 时间戳: ${newData.since}\n` +
       '→ 要求严格 ISO8601 格式（YYYY-MM-DDTHH:MM:SS[.sss]Z），拒绝 RFC2822 等宽松格式。\n' +
-      '→ 请用 `date -u +%Y-%m-%dT%H:%M:%S.000Z` 获取当前时间写入 since。';
+      '→ 也可写 "auto" 或 "now"，PostToolUse:Write stage-since-autofill 会自动覆写真实时间（C-HOOK-09）。\n' +
+      '→ 或用 `date -u +%Y-%m-%dT%H:%M:%S.000Z` 获取当前时间写入 since。';
   }
   const sinceTime = Date.parse(newData.since);
   // 防御：正则形状匹配但日期值不合法（如 2026-99-99T99:99:99Z）Date.parse 返回 NaN

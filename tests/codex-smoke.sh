@@ -27,6 +27,17 @@ KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROMPT="Read README.md"                         # 多 hook 触发：SessionStart + PreToolUse:Read + PostToolUse:Read + Stop
 TIMEOUT_SEC="${SMOKE_TIMEOUT:-180}"
 
+# timeout 命令在 macOS 默认不存在（GNU coreutils 的 gtimeout 需 brew install coreutils）。
+# 检测并回退：gtimeout > timeout > 无（直接跑不限时，靠外层 run.js 统一管理 hung）。
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=(timeout "$TIMEOUT_SEC")
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=(gtimeout "$TIMEOUT_SEC")
+else
+  echo "[codex-smoke] WARN: 系统无 timeout/gtimeout，本次不限时（macOS 需 brew install coreutils）" >&2
+  TIMEOUT_CMD=()
+fi
+
 # ── 前置检查：codex 是否可用 ──
 if ! command -v codex >/dev/null 2>&1; then
   if [ "${CODEX_REQUIRED:-0}" = "1" ]; then
@@ -111,7 +122,7 @@ echo "[codex-smoke] 运行 codex exec (prompt=$PROMPT, timeout=${TIMEOUT_SEC}s).
 set +e
 (
   cd "$TMP_DIR" && \
-  timeout "$TIMEOUT_SEC" codex exec \
+  ${TIMEOUT_CMD[@]+"${TIMEOUT_CMD[@]}"} codex exec \
     --dangerously-bypass-approvals-and-sandbox \
     --enable codex_hooks \
     --skip-git-repo-check \
@@ -170,7 +181,7 @@ fi
 
 # 额外宽松断言：exit 非 0 也视为疑似故障（除非是已知的 timeout 已处理）
 if [ "$RUN_EXIT" -ne 0 ]; then
-  echo "[codex-smoke] WARN: codex 非 0 退出（exit=$RUN_EXIT），但未命中 hook (failed) 类告警；记录以便调查。" >&2
+  echo "[codex-smoke] WARN: codex 非 0 退出（exit=${RUN_EXIT}），但未命中 hook (failed) 类告警；记录以便调查。" >&2
   echo "[codex-smoke] 日志 tail:" >&2
   tail -n 30 "$RUN_LOG" >&2
   # 非 hook 失败的 exit 不判 FAIL，避免 codex 本身抖动（如 rate limit）把本测试钉死

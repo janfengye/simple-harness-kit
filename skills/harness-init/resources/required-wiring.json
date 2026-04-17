@@ -12,6 +12,7 @@
     "scripts/hooks/safety-guard.js",
     "scripts/hooks/find-root.js",
     "scripts/hooks/session-end.js",
+    "scripts/hooks/stage-since-autofill.js",
     "docs/constraints.md",
     "CLAUDE.md"
   ],
@@ -32,6 +33,7 @@
     { "event": "PostToolUse", "matcher": "Bash", "script": "session-logger.js" },
     { "event": "PostToolUse", "matcher": "Edit", "script": "session-logger.js" },
     { "event": "PostToolUse", "matcher": "Write", "script": "session-logger.js" },
+    { "event": "PostToolUse", "matcher": "Write", "script": "stage-since-autofill.js" },
     { "event": "PostToolUseFailure", "matcher": null, "script": "session-logger.js" },
     { "event": "StopFailure", "matcher": null, "script": "session-logger.js" },
     { "event": "TaskCompleted", "matcher": null, "script": "harness-stage-guard.js" },

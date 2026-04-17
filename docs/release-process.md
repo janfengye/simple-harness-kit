@@ -95,6 +95,33 @@ bash tests/scripts/run-all.sh
 
 ---
 
+### Step 0.7: Pre-Release Gate（强制，2026-04-17 v0.8.7 后加入）
+
+**必须先做**。这一步是 release 的最终机器守门 — `tests/run.js` 全绿 + working tree 干净 + local 与 origin 同步。
+
+```bash
+bash tests/pre-release-check.sh
+
+# 必须看到:
+#   ── 1. tests/run.js 全绿 ── PASS
+#   ── 2. 工作树干净 (无 uncommitted / untracked) ── PASS
+#   ── 3. local master ≡ origin/master ── PASS
+#   Pre-Release Check: 全部 PASS — 可以 tag + push + release
+```
+
+任一 FAIL → `exit 1`，禁止进 Step 1。
+
+**紧急豁免**:
+
+- `SKIP_SYNC_CHECK=1` — 允许 local 领先 origin（单机 release 流程用）。
+- `tests/run.js` 和 working tree dirty 检查**不可豁免**。
+
+**为什么在这一步**: v0.8.6 带着 2 个 pre-existing `tests/run.js` FAIL 发布到 60+ 使用者 — 05-mutation M1 假阴性（defensive code redundancy 让 mutation 探测失效）+ codex-smoke-selftest `RUN_EXIT�` unbound variable（UTF-8 全角括号把变量名吞掉）。Step 0 / 0.5 只跑 `template-integrity` 和 `run-all.sh`（7 维脚本矩阵），覆盖不到 `hook-scenarios/` / `codex-smoke.sh` 等路径。本次 VH-16 调查时才追溯出这两个 FAIL 早就存在，release gate 有显著漏洞。
+
+**关联约束**: C-GATE-09
+
+---
+
 ### Step 1: 决定版本号
 
 查看自上次 tag 以来的变更：

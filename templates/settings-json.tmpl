@@ -3,7 +3,10 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-session-start.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-session-start.js"
+          }
         ],
         "description": "新 session 重置陈旧阶段 + 输出入口 banner"
       }
@@ -12,119 +15,170 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
         "matcher": "Edit",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
         "matcher": "Agent",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
         "matcher": "TaskUpdate",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段，防止新 session 不遵守流程"
       },
       {
         "matcher": "Read",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
         "matcher": "Grep",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
         "matcher": "Glob",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
         "matcher": "WebFetch",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
         "matcher": "WebSearch",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "强制声明 Harness 阶段（PLAN 阶段注入 directive）"
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/safety-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/safety-guard.js"
+          }
         ],
         "description": "拦截危险命令（rm -rf, force push, DROP TABLE 等）"
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/verification-gate.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/verification-gate.js"
+          }
         ],
         "description": "提交前检查 QA 验证是否完成"
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/delivery-review.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/delivery-review.js"
+          }
         ],
         "description": "交付前触发 5 项复盘检查"
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/commit-check.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/commit-check.js"
+          }
         ],
         "description": "AI commit 必须包含 Co-Authored-By + REVIEW 阶段检查未提交变更"
       },
       {
         "matcher": "Agent",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/agent-check.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/agent-check.js"
+          }
         ],
         "description": "修复类 Agent 必须引用 Constraint ID"
       },
       {
         "matcher": "Edit",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/context-monitor.js"
+          }
         ],
         "description": "上下文预算监控，超阈值提醒 compact"
       },
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/context-monitor.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/context-monitor.js"
+          }
         ],
         "description": "上下文预算监控，超阈值提醒 compact"
       }
@@ -133,36 +187,61 @@
       {
         "matcher": "Agent",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录 Agent 派发到 session-log"
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录 Bash 命令到 session-log"
       },
       {
         "matcher": "Edit",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录文件编辑到 session-log"
       },
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录文件创建到 session-log"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/stage-since-autofill.js"
+          }
+        ],
+        "description": "since sentinel (\"auto\"/\"now\") 自动覆写为真实 ISO (VH-14 Option A, C-HOOK-09)"
       }
     ],
     "PostToolUseFailure": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录失败工具调用到 session-log + observations"
       }
@@ -170,7 +249,10 @@
     "StopFailure": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-logger.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-logger.js"
+          }
         ],
         "description": "记录 API 错误结束（rate_limit / billing_error 等）到 session-log + observations"
       }
@@ -178,7 +260,10 @@
     "TaskCompleted": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/harness-stage-guard.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/harness-stage-guard.js"
+          }
         ],
         "description": "任务标记完成时提醒检查 VERIFY 证据（含 agent team 场景）"
       }
@@ -186,7 +271,10 @@
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/session-end.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/session-end.js"
+          }
         ],
         "description": "session 结束时归档 observations + 写结束标记"
       }
@@ -194,7 +282,10 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/hooks/delivery-gate.js" }
+          {
+            "type": "command",
+            "command": "D=$(cd \"$(pwd)\" && pwd -P);while [ \"$D\" != / ]&&[ ! -f \"$D/scripts/hooks/find-root.js\" ];do D=$(dirname \"$D\");done;[ -f \"$D/scripts/hooks/find-root.js\" ]&&cd \"$D\"&&node scripts/hooks/delivery-gate.js"
+          }
         ],
         "description": "交付前合规检查——阻止在 EXECUTE/VERIFY(无证据) 阶段宣称完成"
       }

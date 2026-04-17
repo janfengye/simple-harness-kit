@@ -59,15 +59,23 @@ prep_mutant() {
 }
 
 # ═══ M1: install.sh 幂等性破坏 ═══
-echo "  [mutation M1] 注入: install.sh 的 rm -rf 改注释"
+# install.sh 对 VH-10 的防御是 belt-and-suspenders:
+#   (a) `rm -rf "$DEST/$skill_name"` 显式清空目标
+#   (b) `cp -r "$skill_dir" "$DEST/..."` 中 $skill_dir 带尾斜杠(来自 glob "$SKILLS_SRC"/*/)
+#       BSD/GNU cp 对尾斜杠 src 的语义是"拷贝内容而非目录自身", 天然不嵌套
+# 任一单独保留都能防止嵌套. 只破 (a) 留 (b) 维度 01 不会 FAIL — 这正是 M1 历史假阴性的原因.
+# M1 必须同时破坏两层防御才能真的暴露 VH-10 回归.
+echo "  [mutation M1] 注入: install.sh 的 rm -rf 改注释 + cp -r src 去尾斜杠 (双防御失效)"
 prep_mutant
 # macOS/BSD sed 和 GNU sed 的 -i 语法不同. 用 sed -e 读+写 tmpfile 方式
 sed -e 's|^      rm -rf "\$DEST/\$skill_name"|      # rm -rf "\$DEST/\$skill_name"|' \
+    -e 's|cp -r "\$skill_dir"|cp -r "${skill_dir%/}"|' \
   "$TMP_MUTANT_KIT/install.sh" > "$TMP_MUTANT_KIT/install.sh.new"
 mv "$TMP_MUTANT_KIT/install.sh.new" "$TMP_MUTANT_KIT/install.sh"
 
-# 验证注入生效 (行被注释掉)
-if grep -q '^      # rm -rf "\$DEST/\$skill_name"' "$TMP_MUTANT_KIT/install.sh"; then
+# 验证两处注入都生效
+if grep -q '^      # rm -rf "\$DEST/\$skill_name"' "$TMP_MUTANT_KIT/install.sh" \
+   && grep -q 'cp -r "${skill_dir%/}"' "$TMP_MUTANT_KIT/install.sh"; then
   echo "    注入已生效"
 else
   echo "    ERR: 注入未生效 — install.sh 结构变了? 请检查 sed 模式"

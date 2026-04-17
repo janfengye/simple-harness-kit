@@ -10,6 +10,35 @@
 
 （暂无新条目）
 
+## [0.8.7] - 2026-04-17
+
+### Fixed
+
+- **kit template 子目录启 session MODULE_NOT_FOUND (VH-16)**: mind-palace 用户在子目录启动 Claude Code，Stop hook 报 `Cannot find module '<subdir>/scripts/hooks/delivery-gate.js'`。根因：`templates/settings-json.tmpl` + `skills/harness-init/resources/settings-json.tmpl` 用裸 `node scripts/hooks/X.js`，cwd=子目录时相对路径解析到不存在路径。所有用 kit init 出来的项目都有潜在 bug。修复：两份模板 + `init-prompt.md` 嵌入 sample 全部加 find-root shell wrapper（marker=`scripts/hooks/find-root.js`）。新增 C-HOOK-08 约束 + `tests/template-integrity.js` T16 自动守门。
+- **VH-14 Option A sentinel 兑现 (C-HOOK-09)**: v0.8.1 的 Option B（`SINCE_DRIFT_LIMIT` 放宽到 30 分钟）在跨 hour 长 session 仍撞窗（dogfooding session 本次已撞 2 次）。Option A 落地：`harness-stage-guard.js::validateSince` 接受 `"auto"` / `"now"` sentinel，新增 `scripts/hooks/stage-since-autofill.js`（PostToolUse:Write）立即用真实 ISO 覆写。AI 不再需要手抄 `date -u` 输出。新增 10 个 hook-scenarios（sentinel 覆写 + 边界拒绝）。
+- **05-mutation-test M1 假阴性**: 注入 `# rm -rf` 后 维度 01 应 FAIL 但通过。根因：install.sh 有 belt-and-suspenders 双重防御（`rm -rf` + `cp -r` src 尾斜杠），任一保留都能防止嵌套。M1 只破单防御，另一个仍防住。修复：M1 同时破坏两层（`rm -rf` 注释 + `${skill_dir%/}` 去尾斜杠）。
+- **codex-smoke-selftest `RUN_EXIT` unbound variable**: 两个独立问题。(1) line 173 `echo "... exit=$RUN_EXIT）..."` 中的全角括号 `）`（UTF-8 EF BC 89）被 bash `set -u` 并进变量名，导致 `RUN_EXIT\xEF\xBC\x89` unbound。修复：`${RUN_EXIT}` 显式定界。(2) macOS 默认无 `timeout` 命令，导致 `timeout "$TIMEOUT_SEC" codex exec` exit 127（command not found），早于 `RUN_EXIT=$?` 赋值。修复：运行时探测 `timeout` / `gtimeout` / 无（警告不限时）。
+
+### Added
+
+- **`tests/pre-release-check.sh` + C-GATE-09 release gate**: 发版前强制机器门控三层检查（`tests/run.js` 全绿 + working tree 干净 + local ≡ origin/master）。任一 FAIL 拒绝 tag。接入 `docs/release-process.md` Step 0.7。背景：v0.8.6 带着 2 个 pre-existing `tests/run.js` FAIL 发布到 60+ 用户，Step 0/0.5 只跑 `template-integrity` + `run-all.sh`，不覆盖 `hook-scenarios/` / `codex-smoke.sh`。本次 VH-16 调查时才发现漏洞，补守门避免重犯。
+- **`tests/template-integrity.js` T16**: 静态检查 `templates/settings-json.tmpl` + `init-prompt.md` sample 所有 hook command 含 find-root wrapper (C-HOOK-08)。
+- **10 new `hook-scenarios/`**: 7 个 `stage-since-autofill.json`（sentinel 覆写 / 非目标 / 非 Write / JSON 损坏等）+ 3 个 `stage-guard.json`（auto/now 放行、invalid 仍拒）。
+
+### Changed
+
+- **`required-wiring.json`**: 新增 `scripts/hooks/stage-since-autofill.js` 为必选文件 + `PostToolUse:Write:stage-since-autofill.js` 为必选 wiring。
+- **`templates/settings-json.tmpl` + `skills/harness-init/resources/settings-json.tmpl` + `init-prompt.md` + `resources/init-prompt.md`**: 所有 hook command wrap + 注册 autofill hook + 资源副本同步。
+- **T3/T4/T6 regex**: 从 `scripts\/hooks\/([\w-]+\.js)` 改为 `node\s+scripts\/hooks\/([\w-]+\.js)` 以排除 wrapper 里 find-root.js marker 的干扰。
+
+### Constraints
+
+- **新 C-HOOK-08** (kit-level): settings.json hook command 必须用 find-root wrapper
+- **新 C-HOOK-09** (kit-level): since sentinel + autofill
+- **新 C-GATE-09** (kit-level): release 前 pre-release-check.sh 必须 exit 0
+- **新 VH-16**: mind-palace 子目录 Stop hook 事件
+- 双仓同步（workspace + kit）+ T10/T11/T12 PASS
+
 ## [0.8.6] - 2026-04-16
 
 ### Added

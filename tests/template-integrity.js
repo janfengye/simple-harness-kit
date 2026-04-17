@@ -164,7 +164,7 @@ function runTemplateIntegrityTests() {
       for (const entry of entries) {
         for (const h of (entry.hooks || [])) {
           const cmd = h.command || '';
-          const m = cmd.match(/scripts\/hooks\/([\w-]+\.js)/);
+          const m = cmd.match(/node\s+scripts\/hooks\/([\w-]+\.js)/);
           if (m) {
             tmplWirings.push({ event, matcher: entry.matcher || null, script: m[1] });
           }
@@ -202,7 +202,7 @@ function runTemplateIntegrityTests() {
       for (const entry of entries) {
         for (const h of (entry.hooks || [])) {
           const cmd = h.command || '';
-          const m = cmd.match(/scripts\/hooks\/([\w-]+\.js)/);
+          const m = cmd.match(/node\s+scripts\/hooks\/([\w-]+\.js)/);
           if (m) referenced.add(m[1]);
         }
       }
@@ -243,7 +243,7 @@ function runTemplateIntegrityTests() {
       for (const entry of entries) {
         for (const h of (entry.hooks || [])) {
           const cmd = h.command || '';
-          const m = cmd.match(/scripts\/hooks\/([\w-]+\.js)/);
+          const m = cmd.match(/node\s+scripts\/hooks\/([\w-]+\.js)/);
           if (m) {
             initWirings.push({ event, matcher: entry.matcher || null, script: m[1] });
           }
@@ -702,6 +702,49 @@ function runTemplateIntegrityTests() {
       if (!content.includes(needle)) errors.push(`缺少: ${label} ("${needle}")`);
     }
     if (errors.length > 0) return errors.join(' | ');
+  });
+
+  // ── T16: settings-json.tmpl 所有 hook command 必须用 find-root wrapper (C-HOOK-08, VH-16) ──
+  // 背景: VH-16 (2026-04-17) mind-palace 子目录起 session 爆 MODULE_NOT_FOUND.
+  // 根因: 模板 hook command 用裸 `node scripts/hooks/X.js`, cwd=子目录时 node 解析到
+  // <subdir>/scripts/hooks/X.js (不存在) → hook 报错. VH-10 dogfooding 假 PASS 复演.
+  // 修复: 所有 hook command 必须带 shell wrapper 向上找 scripts/hooks/find-root.js 后 cd.
+  // 本 T 同时检查源模板和 skill resources 副本 (T12 byte-identical 已覆盖同步, 本 T 覆盖内容).
+  check('template: settings-json.tmpl + init-prompt.md sample 所有 hook command 用 find-root wrapper (C-HOOK-08)', () => {
+    if (!tmplSettings) return '前置检查失败，跳过';
+
+    const scanSettings = (settings, sourceLabel) => {
+      const bare = [];
+      for (const [event, entries] of Object.entries(settings.hooks || {})) {
+        for (const entry of entries) {
+          for (const h of (entry.hooks || [])) {
+            if (h.type !== 'command') continue;
+            const cmd = h.command || '';
+            if (!cmd.includes('scripts/hooks/find-root.js')) {
+              const shown = cmd.length > 80 ? cmd.slice(0, 80) + '...' : cmd;
+              bare.push(`[${sourceLabel}] ${event}:${entry.matcher || '*'} → ${shown}`);
+            }
+          }
+        }
+      }
+      return bare;
+    };
+
+    const allBare = [];
+    allBare.push(...scanSettings(tmplSettings, 'templates/settings-json.tmpl'));
+
+    // init-prompt.md 嵌入 sample
+    if (fs.existsSync(INIT_PROMPT)) {
+      const content = fs.readFileSync(INIT_PROMPT, 'utf8');
+      const initSample = extractMinimumSettingsFromInitPrompt(content);
+      if (initSample) {
+        allBare.push(...scanSettings(initSample, 'init-prompt.md sample'));
+      }
+    }
+
+    if (allBare.length > 0) {
+      return `共 ${allBare.length} 个裸 hook command (违反 C-HOOK-08，子目录起 session 会 MODULE_NOT_FOUND):\n      ` + allBare.join('\n      ');
+    }
   });
 
   const pass = results.filter(r => r.ok).length;
