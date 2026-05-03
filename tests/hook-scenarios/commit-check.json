@@ -101,5 +101,200 @@
       "stderrNot": ["格式不符合"],
       "stdout": "empty"
     }
+  },
+  {
+    "name": "commit-check: opt-in 负例 — 默认 fallback 到 generic + presets 已 vendor + 违规 subject → 不应 subject warn (back-compat)",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '随便写啥都行\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: opt-in 正例 — HARNESS_PRESET=generic 显式 + 违规 subject → 仍 subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "generic" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '随便写啥都行\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'generic'"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: HARNESS_PRESET=example-company + 缺 TICKET 前缀 → subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "example-company" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'feat: add login\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'example-company'"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: HARNESS_PRESET=example-company + 合规 'JIRA-1234 feat:' → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "example-company" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'JIRA-1234 feat: add login\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+
+  {
+    "name": "commit-check: ths-example + '123456 feat 添加用户登录' (数字 task-id) → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 feat 添加用户登录\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + 'TCLOUD-100 feat 提供分支校验功能' (字母-数字 task-id) → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'TCLOUD-100 feat 提供分支校验功能\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + 'style 调整缩进' (无 task-id) → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'style 调整缩进\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + 'docs 在 Readme 中增加部署说明' (无 task-id) → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m 'docs 在 Readme 中增加部署说明\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + '123456 skip ...' (新 type skip) → 不警告",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 skip 不计代码量的提交\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderrNot": ["Subject 不符合"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + '123456 chore(gitignore) ...' (chore 带 scope, 本次实测被 server 拒) → subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 chore(gitignore) 忽略 dogfood 产物\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'ths-example'"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + '123456 feat(api) ...' (feat 带 scope) → subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 feat(api) 添加用户登录\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'ths-example'"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + '123456 unknown 标题' (type 不在枚举) → subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 unknown 标题\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'ths-example'"],
+      "stdout": "empty"
+    }
+  },
+  {
+    "name": "commit-check: ths-example + '123456 feat: 添加登录' (type 后冒号, Conventional 风格) → subject warn",
+    "hook": "commit-check.js",
+    "kitPresets": true,
+    "env": { "HARNESS_PRESET": "ths-example" },
+    "stdin": {
+      "tool_name": "Bash",
+      "tool_input": { "command": "git commit -m '123456 feat: 添加登录\n\nCo-Authored-By: Claude Code (claude-opus-4-7)'" }
+    },
+    "expect": {
+      "exitCode": 0,
+      "stderr": ["Subject 不符合 preset 'ths-example'"],
+      "stdout": "empty"
+    }
   }
 ]
