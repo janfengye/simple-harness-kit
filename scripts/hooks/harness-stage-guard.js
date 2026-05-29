@@ -34,6 +34,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { isLegitimateHarnessRoot } = require('./find-root');
 const findRoot = require('./find-root');
 const ROOT_RAW = findRoot();
 // macOS /tmp → /private/tmp symlink 导致 path.resolve 和 Claude Code 的绝对路径不一致。
@@ -44,6 +45,14 @@ const ROOT = (() => { try { return fs.realpathSync(ROOT_RAW); } catch { return R
 const STAGE_FILE = path.join(ROOT, '.harness/current-stage.json');
 const STALE_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_STDIN = 1024 * 1024;
+
+// VH-18 F3: 只在合法 Harness 项目根（worktree 或已存 .harness/）才
+// mkdir 自举。fallback-cwd 时直接退出，确保 stage-guard 不在普通空目录
+// 创建 .harness/ 污染用户环境（避免 Codex review 报告的"任意空目录变 Harness"问题）。
+if (!isLegitimateHarnessRoot(ROOT)) {
+  process.exit(0);
+}
+try { fs.mkdirSync(path.join(ROOT, '.harness'), { recursive: true }); } catch {}
 
 // 安全文件读取: 拒绝 symlink 防止 bypass attack。
 // #30 治理: 攻击者把 .harness/current-stage.json symlink 到外部受控文件可以

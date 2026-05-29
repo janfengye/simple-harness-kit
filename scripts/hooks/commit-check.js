@@ -27,23 +27,40 @@ process.stdin.on('end', () => {
 
     // === 检查 1+2: git commit 必须包含 Co-Authored-By + subject 匹配 preset ===
     if (/git\s+commit/.test(cmd)) {
-      // 从命令中提取 commit message — 覆盖更多 -m / --message= 形式
-      // 顺序：heredoc → -m "..." → -m '...' → --message=...
+      // 从命令中提取 commit message
+      // VH-18 F2 / R2-2: 与 git 一致——多个 -m / --message= 之间用 "\n\n" 拼接
+      //   （git 的实际行为）。旧代码只取第一个 -m → 误判缺 Co-Authored-By；
+      //   v1 分 3 趟 regex（双引、单引、--message=）顺序错乱，混用引号时
+      //   `git commit -m 'subj' -m "trailer"` 拼成 `trailer\n\nsubj`，
+      //   subject 被识别成 trailer。
+      //   v2 (本版) 用单个全局 regex 一次扫所有 token，按 match.index
+      //   自然顺序迭代，参数顺序 == git 实际语义。
+      // 覆盖顺序：heredoc (取首段) → 所有 -m / --message= 按出现顺序拼接
       let msg = '';
       let m;
       m = cmd.match(/<<['"]?EOF([\s\S]*?)EOF/);
       if (m) msg = m[1];
       if (!msg) {
-        m = cmd.match(/(?:^|\s)-m\s+"([\s\S]*?)(?<!\\)"/);
-        if (m) msg = m[1];
-      }
-      if (!msg) {
-        m = cmd.match(/(?:^|\s)-m\s+'([\s\S]*?)'/);
-        if (m) msg = m[1];
-      }
-      if (!msg) {
-        m = cmd.match(/--message=("([^"]*)"|'([^']*)'|(\S+))/);
-        if (m) msg = m[2] || m[3] || m[4] || '';
+        // 单 regex 覆盖 -m "..." / -m '...' / --message="..." / --message='...' / --message=bare
+        // 捕获组语义：
+        //   2 = -m "..." 内容
+        //   3 = -m '...' 内容
+        //   5 = --message="..." 内容
+        //   6 = --message='...' 内容
+        //   7 = --message=bare 内容
+        const re = /(?:^|\s)(?:-m\s+("([\s\S]*?)(?<!\\)"|'([\s\S]*?)')|--message=("([^"]*)"|'([^']*)'|(\S+)))/g;
+        const segs = [];
+        let mm;
+        while ((mm = re.exec(cmd)) !== null) {
+          const seg = mm[2] !== undefined ? mm[2]
+                    : mm[3] !== undefined ? mm[3]
+                    : mm[5] !== undefined ? mm[5]
+                    : mm[6] !== undefined ? mm[6]
+                    : mm[7] !== undefined ? mm[7]
+                    : '';
+          segs.push(seg);
+        }
+        if (segs.length > 0) msg = segs.join('\n\n');
       }
 
       if (msg) {
@@ -77,8 +94,8 @@ process.stdin.on('end', () => {
         if (!hasCoAuthored) {
           process.stderr.write(
             '[Commit Check] AI 辅助的 commit 缺少 Co-Authored-By 标注。\n' +
-            '→ 格式: Co-Authored-By: {工具名} ({模型ID})\n' +
-            '→ 例如: Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
+            '→ 格式: Co-Authored-By: {工具名} ({模型ID}) {code|test|fix}\n' +
+            '→ 例如: Co-Authored-By: Claude Code (claude-opus-4-6) code\n' +
             '→ 详见 methodology/12-commit-standards.md\n'
           );
           // 警告但不阻止，因为可能是纯人工 commit
@@ -96,9 +113,11 @@ process.stdin.on('end', () => {
           const toolAlt = ALLOWED_TOOLS
             .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
             .join('|');
-          // 正则：Co-Authored-By: <Tool Name> (<model-id>)  —— 模型 ID 允许字母/数字/点/连字符/下划线
-          // 禁止尾部 <email>（老模板产物）；括号模型 ID 必选
-          const validLine = new RegExp(`^Co-Authored-By:\\s+(?:${toolAlt})\\s+\\([\\w.\\-]+\\)\\s*$`);
+          // 正则：Co-Authored-By: <Tool Name> (<model-id>) <type>
+          //   - 模型 ID 允许字母/数字/点/连字符/下划线，括号必选
+          //   - 第三段 type 必选，仅 code/test/fix（commit 内容语义维度）
+          //   - 禁止尾部 <email>（老模板产物）
+          const validLine = new RegExp(`^Co-Authored-By:\\s+(?:${toolAlt})\\s+\\([\\w.\\-]+\\)\\s+(?:code|test|fix)\\s*$`);
 
           const badLines = [];
           for (const line of msg.split('\n')) {
@@ -112,10 +131,11 @@ process.stdin.on('end', () => {
           if (badLines.length > 0) {
             process.stderr.write(
               '[Commit Check] Co-Authored-By 格式不符合 methodology/12-commit-standards.md。\n' +
-              '→ 标准格式: Co-Authored-By: {工具名} ({模型ID})\n' +
-              '→ 例如:    Co-Authored-By: Claude Code (claude-opus-4-6)\n' +
+              '→ 标准格式: Co-Authored-By: {工具名} ({模型ID}) {code|test|fix}\n' +
+              '→ 例如:    Co-Authored-By: Claude Code (claude-opus-4-6) code\n' +
               '→ 允许的工具名: ' + ALLOWED_TOOLS.join(' / ') + '\n' +
-              '→ 禁止: 尾部 <email> / 括号外带空格 / 工具名与表格不符\n' +
+              '→ type 段（必填）: code（业务代码）/ test（测试）/ fix（修 bug）\n' +
+              '→ 禁止: 尾部 <email> / 括号外带空格 / 工具名与表格不符 / 缺第三段\n' +
               '→ 不合规的行:\n'
             );
             for (const l of badLines) {
