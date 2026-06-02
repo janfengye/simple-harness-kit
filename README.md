@@ -27,7 +27,7 @@ bash ~/simple-harness-kit/install.sh
 `install.sh` will:
 - Install skills to `~/.claude/skills/` and/or `~/.codex/skills/` (auto-detect, or `--target claude|codex|both`)
 - Write `~/.simple-harness-kit-root` so `harness-init` can auto-locate the kit later
-- (Codex only) Ask if you want `alias codex='codex --enable codex_hooks --full-auto'` written to `~/.zshrc` / `~/.bashrc` — recommended; covers both `init` and daily use in one alias
+- (Codex only) Ask if you want `alias codex='codex --enable hooks --sandbox workspace-write --ask-for-approval on-request'` written to `~/.zshrc` / `~/.bashrc` — recommended; enables hooks and uses the current explicit sandbox/approval flags
 
 Update: `git -C ~/simple-harness-kit pull && bash ~/simple-harness-kit/install.sh`
 
@@ -44,7 +44,7 @@ claude              # start TUI
 # Codex (must be TUI mode — exec/non-interactive deadlocks at kit lookup):
 codex               # if you accepted the alias in Step 1, this is enough
 # OR if no alias:
-codex --full-auto --enable codex_hooks
+codex --enable hooks --sandbox workspace-write --ask-for-approval on-request
 # then in TUI:
 $harness-init       # NOTE: $ not / — Codex skill trigger sigil is $
 ```
@@ -101,7 +101,7 @@ The skill asks for the issue and expected behavior, then runs F1-F5 automaticall
 
 - **6-Stage Loop:** Plan → Setup → Execute → Verify → Review → Feedback (loops until quality gates pass)
 - **5-Layer QA Pyramid:** TDD self-verify → Tool checks (build/lint/test) → Spec review (independent reviewer) → Santa Method (dual adversarial) → Human review
-- **9 Hooks:** safety-guard, harness-stage-guard, agent-check, verification-gate, commit-check, delivery-review, context-monitor, session-logger, branch-policy-guard — fire at 100% reliability regardless of context length
+- **Hook enforcement:** core hooks + optional/helper scripts cover stage guard, safety, verification, commit, delivery, learning, session logging, branch policy, and Codex compatibility — fire at 100% reliability regardless of context length
 - **Continuous Learning:** Auto-captures tool usage patterns (<50ms, no overhead), analyzes at each REVIEW stage. Pure local analysis, zero API calls. Discovers workflow habits, hot files needing tests, stable patterns to promote to Rules (token savings)
 
 ### Preset System (v0.9.0)
@@ -167,7 +167,7 @@ We surveyed three layers: **agent frameworks** (DeerFlow/LangGraph/CrewAI — bu
 | Tool | Hook Support | Status |
 |------|-------------|--------|
 | **Claude Code** | Native PreToolUse/PostToolUse | **Verified** (Exp A/B/C) |
-| **Codex CLI** | Native hooks (`codex_hooks` flag required) | **Verified** (Exp C + cross-test) |
+| **Codex CLI** | Native hooks (`hooks` flag required) | **Verified** (Exp C + cross-test) |
 | **Gemini CLI** | v0.26+ BeforeTool/AfterTool | Untested |
 | **Cursor** | v1.7+ hooks | Untested |
 | **OpenCode** | Plugin API (needs rewrite) | Untested |
@@ -187,12 +187,13 @@ We surveyed three layers: **agent frameworks** (DeerFlow/LangGraph/CrewAI — bu
 
 ```
 simple-harness-kit/
-├── methodology/   15 methodology docs
+├── methodology/   20 methodology docs
 ├── presets/       2 built-in (generic + example-company), data-driven commit & branch rules
-├── templates/     5 rule templates + 9 hook scripts + 4 config templates
-├── skills/        7 skills (init user-triggered | rest AI-auto)
+├── templates/     11 templates
+├── scripts/hooks/ 16 hook/helper scripts
+├── skills/        11 skills (init user-triggered | rest AI-auto)
 ├── examples/      3 real-world experiments (A + B + C)
-├── tests/         138+ hook scenarios + template integrity + scripted matrix + codex smoke
+├── tests/         170 hook scenarios + template integrity + scripted matrix + codex smoke
 └── init-prompt.md initialization prompt
 ```
 
