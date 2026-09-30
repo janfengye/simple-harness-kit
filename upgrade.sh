@@ -25,7 +25,7 @@ set -euo pipefail
 #
 # 打 tag 的顺序：先在本 commit 里把 DEFAULT_REF 指向即将创建的 tag，再让 tag 指向本
 # commit——这样 tag 内的 upgrade.sh 是自洽的，避免"必须先有 tag 才能改 ref"的死循环。
-DEFAULT_REF="v0.15.0-rc.1"
+DEFAULT_REF="v0.15.0"
 REF="${SHK_REF:-$DEFAULT_REF}"
 REPO_URL="https://github.com/duoglas/simple-harness-kit.git"
 
@@ -78,11 +78,11 @@ echo "[shk-upgrade] kit 位置: $KIT"
 
 # ── 2. 脏工作区保护 + 切版本 ──
 if ! kit_status="$(git -C "$KIT" status --porcelain=v1 --untracked-files=normal 2>/dev/null)"; then
-  echo "[shk-upgrade] 中止: 无法验证 kit 工作区状态（$KIT）；在状态边界确认前不会 fetch/checkout。"
+  echo "[shk-upgrade] 中止: 无法验证 kit 工作区状态（${KIT}）；在状态边界确认前不会 fetch/checkout。"
   exit 1
 fi
 if [ -n "$kit_status" ]; then
-  echo "[shk-upgrade] 中止: kit 工作区有未提交改动或未跟踪文件（$KIT）。请先处理（git -C \"$KIT\" status）后重试。"
+  echo "[shk-upgrade] 中止: kit 工作区有未提交改动或未跟踪文件（${KIT}）。请先处理（git -C \"$KIT\" status）后重试。"
   printf '%s\n' "$kit_status"
   exit 1
 fi
